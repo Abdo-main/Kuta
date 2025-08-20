@@ -1,0 +1,44 @@
+[
+{
+  "directory": "G:/Dev/Kuta-main/build-mingw",
+  "command": "C:\\PROGRA~1\\mingw64\\bin\\gcc.exe -DGLFW_DLL @CMakeFiles/kuta.dir/includes_C.rsp -std=gnu17 -o CMakeFiles\\kuta.dir\\src\\Base\\main.c.obj -c G:\\Dev\\Kuta-main\\src\\Base\\main.c",
+  "file": "G:/Dev/Kuta-main/src/Base/main.c",
+  "output": "CMakeFiles/kuta.dir/src/Base/main.c.obj"
+},
+{
+  "directory": "G:/Dev/Kuta-main/build-mingw",
+  "command": "C:\\PROGRA~1\\mingw64\\bin\\gcc.exe -DGLFW_DLL @CMakeFiles/kuta.dir/includes_C.rsp -std=gnu17 -o CMakeFiles\\kuta.dir\\src\\Base\\window.c.obj -c G:\\Dev\\Kuta-main\\src\\Base\\window.c",
+  "file": "G:/Dev/Kuta-main/src/Base/window.c",
+  "output": "CMakeFiles/kuta.dir/src/Base/window.c.obj"
+},
+{
+  "directory": "G:/Dev/Kuta-main/build-mingw",
+  "command": "C:\\PROGRA~1\\mingw64\\bin\\gcc.exe -DGLFW_DLL @CMakeFiles/kuta.dir/includes_C.rsp -std=gnu17 -o CMakeFiles\\kuta.dir\\src\\Base\\vulkan_core.c.obj -c G:\\Dev\\Kuta-main\\src\\Base\\vulkan_core.c",
+  "file": "G:/Dev/Kuta-main/src/Base/vulkan_core.c",
+  "output": "CMakeFiles/kuta.dir/src/Base/vulkan_core.c.obj"
+},
+{
+  "directory": "G:/Dev/Kuta-main/build-mingw",
+  "command": "C:\\PROGRA~1\\mingw64\\bin\\gcc.exe -DGLFW_DLL @CMakeFiles/kuta.dir/includes_C.rsp -std=gnu17 -o CMakeFiles\\kuta.dir\\src\\Base\\swapchain.c.obj -c G:\\Dev\\Kuta-main\\src\\Base\\swapchain.c",
+  "file": "G:/Dev/Kuta-main/src/Base/swapchain.c",
+  "output": "CMakeFiles/kuta.dir/src/Base/swapchain.c.obj"
+},
+{
+  "directory": "G:/Dev/Kuta-main/build-mingw",
+  "command": "C:\\PROGRA~1\\mingw64\\bin\\gcc.exe -DGLFW_DLL @CMakeFiles/kuta.dir/includes_C.rsp -std=gnu17 -o CMakeFiles\\kuta.dir\\src\\Base\\renderer.c.obj -c G:\\Dev\\Kuta-main\\src\\Base\\renderer.c",
+  "file": "G:/Dev/Kuta-main/src/Base/renderer.c",
+  "output": "CMakeFiles/kuta.dir/src/Base/renderer.c.obj"
+},
+{
+  "directory": "G:/Dev/Kuta-main/build-mingw",
+  "command": "C:\\PROGRA~1\\mingw64\\bin\\gcc.exe -DGLFW_DLL @CMakeFiles/kuta.dir/includes_C.rsp -std=gnu17 -o CMakeFiles\\kuta.dir\\src\\Base\\vertex_data.c.obj -c G:\\Dev\\Kuta-main\\src\\Base\\vertex_data.c",
+  "file": "G:/Dev/Kuta-main/src/Base/vertex_data.c",
+  "output": "CMakeFiles/kuta.dir/src/Base/vertex_data.c.obj"
+},
+{
+  "directory": "G:/Dev/Kuta-main/build-mingw",
+  "command": "C:\\PROGRA~1\\mingw64\\bin\\gcc.exe -DGLFW_DLL @CMakeFiles/kuta.dir/includes_C.rsp -std=gnu17 -o CMakeFiles\\kuta.dir\\src\\Base\\utils.c.obj -c G:\\Dev\\Kuta-main\\src\\Base\\utils.c",
+  "file": "G:/Dev/Kuta-main/src/Base/utils.c",
+  "output": "CMakeFiles/kuta.dir/src/Base/utils.c.obj"
+}
+]
