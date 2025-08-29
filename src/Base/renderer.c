@@ -12,11 +12,11 @@
 
 void create_graphics_pipeline(State *state){
     size_t vert_size;
-    const uint32_t *vert_shader_src = read_file("G:/Dev/Kuta-main/shaders/vert.spv", &vert_size);
+    const uint32_t *vert_shader_src = read_file("./shaders/vert.spv", &vert_size);
     EXPECT(!vert_shader_src, "emtpy sprv file");
 
     size_t frag_size;
-    const uint32_t *frag_shader_src = read_file("G:/Dev/Kuta-main/shaders/frag.spv", &frag_size);
+    const uint32_t *frag_shader_src = read_file("./shaders/frag.spv", &frag_size);
     EXPECT(!frag_shader_src, "emtpy sprv file");
 
     VkShaderModule vertex_shader_module, fragment_shader_module;
@@ -311,7 +311,9 @@ void record_command_buffer(State *state) {
 
     VkBuffer vertex_buffers = {state->vertex_buffer};
     VkDeviceSize offsets[] = {0};
+
     vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffers, offsets);
+    vkCmdBindIndexBuffer(command_buffer, state->index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
     VkViewport viewport = {
         .x = 0.0f, .y = 0.0f,
@@ -327,7 +329,8 @@ void record_command_buffer(State *state) {
     };
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-    vkCmdDraw(command_buffer, sizeof(vertices) / sizeof(vertices[0]), 1, 0, 0);
+    uint32_t index_count = sizeof(indices) / sizeof(indices[0]); // If indices is an array
+    vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
     vkCmdEndRenderPass(command_buffer);
 
     EXPECT(vkEndCommandBuffer(command_buffer), "Couldn't end command buffer");
@@ -335,6 +338,7 @@ void record_command_buffer(State *state) {
 
 void submit_command_buffer(State *state) {
     uint32_t frame = state->current_frame;
+    uint32_t image_index = state->acquired_image_index;
     VkCommandBuffer command_buffer = state->renderer.command_buffers[frame];
     
     EXPECT(vkQueueSubmit(state->queue, 1, &(VkSubmitInfo) {
@@ -344,7 +348,7 @@ void submit_command_buffer(State *state) {
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &state->renderer.acquired_image_semaphore[frame],
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &state->renderer.finished_render_semaphore[frame],
+        .pSignalSemaphores = &state->renderer.finished_render_semaphore[image_index],
         .pWaitDstStageMask = (VkPipelineStageFlags[]) {
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         }
@@ -357,6 +361,7 @@ void create_renderer(State *state){
     create_frame_buffers(state);
     create_command_pool(state);
     create_vertex_buffer(state);
+    create_index_buffer(state);
     allocate_command_buffer(state);
     create_sync_objects(state);
 }

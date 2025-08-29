@@ -53,6 +53,7 @@ void cleanup(State *state) {
     destroy_renderer(state);
     cleanup_swapchain(state);  
 
+    destroy_index_buffer(state);
     destroy_vertex_buffer(state);
 
     if (state->device != VK_NULL_HANDLE)
@@ -75,7 +76,7 @@ int main(void) {
         .window_title = "Hello, Kuta!",
         .window_width = 800,
         .window_height = 600,
-        .window_fullscreen = true,
+        .window_fullscreen = false,
         .api_version = VK_API_VERSION_1_4,
     };
 

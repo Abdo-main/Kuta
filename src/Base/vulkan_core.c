@@ -9,7 +9,8 @@
 #include "utils.h"
 
 void create_instance(State *state) {
-    uint32_t required_extensions_count; const char **required_extensions = glfwGetRequiredInstanceExtensions(&required_extensions_count);
+    uint32_t required_extensions_count; 
+    const char **required_extensions = glfwGetRequiredInstanceExtensions(&required_extensions_count);
     VkApplicationInfo appInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pApplicationName = state->application_name,

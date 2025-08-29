@@ -51,7 +51,12 @@ typedef struct State {
     VkQueue queue;
 
     VkBuffer vertex_buffer;
-    VkDeviceMemory vertex_buffer_memory;
+    VkDeviceMemory vertex_buffer_memmory;
+    VkBuffer staging_buffer;
+    VkDeviceMemory staging_buffer_memmory;
+    VkBuffer index_buffer;
+    VkDeviceMemory index_buffer_memmory;
+
 
     VkClearValue background_color;
     VkSwapchainKHR swap_chain;

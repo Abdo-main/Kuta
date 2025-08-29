@@ -12,7 +12,6 @@
 void acquire_next_swapchain_image(State *state) {
     Renderer* renderer = &state->renderer;
     uint32_t image_index;
-    // Use a semaphore for the currently available image index (cycled each frame)
     VkResult result = vkAcquireNextImageKHR(
         state->device,
         state->swap_chain,
@@ -32,13 +31,14 @@ void acquire_next_swapchain_image(State *state) {
 }
 
 void present_swapchain_image(State *state) {
+    uint32_t image_index = state->acquired_image_index;
     VkPresentInfoKHR present_info = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .swapchainCount = 1,
         .pSwapchains = &state->swap_chain,
         .pImageIndices = &state->acquired_image_index,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &state->renderer.finished_render_semaphore[state->current_frame],
+        .pWaitSemaphores = &state->renderer.finished_render_semaphore[image_index],
     };
     
     VkResult result = vkQueuePresentKHR(state->queue, &present_info);
@@ -77,14 +77,14 @@ VkSurfaceCapabilitiesKHR get_capabilities(VkPhysicalDevice *physical_device, VkS
 VkSurfaceFormatKHR get_formats(VkPhysicalDevice *physical_device, VkSurfaceKHR *surface){
     // Get the number of available surface formats
     uint32_t format_count;
-    EXPECT(vkGetPhysicalDeviceSurfaceFormatsKHR(*(physical_device), *(surface), &format_count, NULL), "Failed to get surface formats")
+    EXPECT(vkGetPhysicalDeviceSurfaceFormatsKHR(*(physical_device), *(surface), &format_count, NULL), "Failed to get the number of surface formats")
 
     // Allocate memory for the formats and query them
     VkSurfaceFormatKHR *formats = malloc(format_count * sizeof(VkSurfaceFormatKHR));
     EXPECT(!formats, "Failed to allocate memmory for formats") 
     EXPECT(vkGetPhysicalDeviceSurfaceFormatsKHR(*(physical_device), *(surface), &format_count, formats), "Failed to get surface formats")
 
-    // Select the best surface format (prefer SRGB non-linear with B8G8R8_SRGB)
+    // Select the best surface format 
     uint32_t format_index = 0;
     for (uint32_t i = 0; i < format_count; i++) {
         VkSurfaceFormatKHR format = formats[i];
@@ -98,7 +98,7 @@ VkSurfaceFormatKHR get_formats(VkPhysicalDevice *physical_device, VkSurfaceKHR *
 }
 
 VkPresentModeKHR select_present_mode(VkPhysicalDevice *physical_device, VkSurfaceKHR *surface){
-    // Default to FIFO present mode (always supported)
+    // Default to FIFO present mode
     VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
     uint32_t present_mode_count;
 
@@ -216,5 +216,6 @@ void recreate_swapchain(State *state) {
 
     destroy_frame_buffers(state);
     cleanup_swapchain(state);
+
     create_swapchain(state);
 }

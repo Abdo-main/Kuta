@@ -1,4 +1,6 @@
+if (WIN32)
 set(CMAKE_TOOLCHAIN_FILE "G:/vcpkg/scripts/buildsystems/vcpkg.cmake")
+endif()
 cmake_minimum_required(VERSION 3.16)
 project(Kuta C)
 
