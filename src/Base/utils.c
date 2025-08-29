@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
+#include <stdbool.h>
 
 #include "utils.h"
+#include "main.h"
 
 uint32_t clamp(uint32_t value, uint32_t min, uint32_t max) {
     if(value < min) {
@@ -13,6 +15,41 @@ uint32_t clamp(uint32_t value, uint32_t min, uint32_t max) {
         return max;
     }
     return value;
+}
+
+VkCommandBuffer begin_single_time_commands(State *state) {
+    VkCommandBufferAllocateInfo alloc_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandPool = state->renderer.command_pool,
+        .commandBufferCount = 1,
+    };
+
+    VkCommandBuffer command_buffer;
+    vkAllocateCommandBuffers(state->device, &alloc_info, &command_buffer);
+
+    VkCommandBufferBeginInfo begin_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+
+    vkBeginCommandBuffer(command_buffer, &begin_info);
+    return command_buffer;
+}
+
+void end_single_time_commands(State *state, VkCommandBuffer command_buffer) {
+    vkEndCommandBuffer(command_buffer);
+
+    VkSubmitInfo submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &command_buffer,
+    };
+
+    vkQueueSubmit(state->queue, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(state->queue);
+
+    vkFreeCommandBuffers(state->device, state->renderer.command_pool, 1, &command_buffer);
 }
 
 const uint32_t* read_file(const char* filename, size_t* size) {

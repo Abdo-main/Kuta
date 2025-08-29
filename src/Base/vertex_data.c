@@ -14,6 +14,7 @@
 #include "vertex_data.h"
 #include "utils.h"
 #include "descriptors.h"
+#include "utils.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -100,43 +101,16 @@ void create_buffer(State *state, VkDeviceSize size,
 }
 
 void copy_buffer(State *state, VkDeviceSize size, VkBuffer src_buffer, VkBuffer dst_buffer) {
-    VkCommandBufferAllocateInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandPool = state->renderer.command_pool,
-        .commandBufferCount = 1,
-    };
-
-    VkCommandBuffer command_buffer;
-    EXPECT(vkAllocateCommandBuffers(state->device, &alloc_info, &command_buffer), "failed to allocate command buffer for copying buffers")
-
-    VkCommandBufferBeginInfo begin_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    };
-
-    EXPECT(vkBeginCommandBuffer(command_buffer, &begin_info), "couldn't begin command buffer for copying buffers")
+    VkCommandBuffer command_buffer = begin_single_time_commands(state);
 
     VkBufferCopy copy_region = {
         .srcOffset = 0,
         .dstOffset = 0,
         .size = size
     };
-
     vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
-
-    vkEndCommandBuffer(command_buffer);
-
-    VkSubmitInfo submit_info = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &command_buffer,
-    };
-
-    vkQueueSubmit(state->queue, 1, &submit_info, VK_NULL_HANDLE);
-    vkQueueWaitIdle(state->queue);
-
-    vkFreeCommandBuffers(state->device, state->renderer.command_pool, 1, &command_buffer);
+    
+    end_single_time_commands(state, command_buffer);
 }
 
 void create_vertex_buffer(State *state) {

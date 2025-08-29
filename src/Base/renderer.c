@@ -7,6 +7,7 @@
 
 
 #include "main.h"
+#include "textures.h"
 #include "vertex_data.h"
 #include "utils.h"
 #include "descriptors.h"
@@ -367,6 +368,7 @@ void create_renderer(State *state){
     create_graphics_pipeline(state);
     create_frame_buffers(state);
     create_command_pool(state);
+    create_texture_image();
     create_vertex_buffer(state);
     create_index_buffer(state);
     create_descriptor_pool(state);

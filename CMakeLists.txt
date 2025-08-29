@@ -8,14 +8,13 @@ project(Kuta C)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Allow user to specify compiler externally (do not hardcode)
-# set(CMAKE_C_COMPILER "clang") # Remove this, let toolchain or environment decide
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Find required packages
 find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
+set(STB_DIR ${CMAKE_SOURCE_DIR}/third_party/stb)
+target_include_directories(kuta PRIVATE ${STB_DIR})
 
 if (WIN32)
 include_directories("G:/Dev/cglm-0.9.6/include")
