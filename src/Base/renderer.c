@@ -9,6 +9,7 @@
 #include "main.h"
 #include "vertex_data.h"
 #include "utils.h"
+#include "descriptors.h"
 
 void create_graphics_pipeline(State *state){
     size_t vert_size;
@@ -76,6 +77,8 @@ void create_graphics_pipeline(State *state){
 
     EXPECT(vkCreatePipelineLayout(state->device, &(VkPipelineLayoutCreateInfo) {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 1,
+        .pSetLayouts = &state->renderer.descriptor_set_layout,
     }, state->allocator, &state->renderer.pipeline_layout), "Faailed to create pipeline layout")
 
     VkVertexInputBindingDescription binding_description = get_binding_description();
@@ -111,7 +114,7 @@ void create_graphics_pipeline(State *state){
         .pRasterizationState = &(VkPipelineRasterizationStateCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             .lineWidth = 1.0,
-            .frontFace = VK_FRONT_FACE_CLOCKWISE,
+            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
             .cullMode = VK_CULL_MODE_BACK_BIT,
             .polygonMode = VK_POLYGON_MODE_FILL,
         },
@@ -329,7 +332,8 @@ void record_command_buffer(State *state) {
     };
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-    uint32_t index_count = sizeof(indices) / sizeof(indices[0]); // If indices is an array
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->renderer.pipeline_layout, 0, 1, &state->renderer.descriptor_sets[state->current_frame], 0, NULL);
+    uint32_t index_count = sizeof(indices) / sizeof(indices[0]); 
     vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
     vkCmdEndRenderPass(command_buffer);
 
@@ -340,6 +344,8 @@ void submit_command_buffer(State *state) {
     uint32_t frame = state->current_frame;
     uint32_t image_index = state->acquired_image_index;
     VkCommandBuffer command_buffer = state->renderer.command_buffers[frame];
+
+    update_uniform_buffer(state, state->current_frame);
     
     EXPECT(vkQueueSubmit(state->queue, 1, &(VkSubmitInfo) {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -357,11 +363,15 @@ void submit_command_buffer(State *state) {
 
 void create_renderer(State *state){
     create_render_pass(state);
+    create_descriptor_set_layout(state);
     create_graphics_pipeline(state);
     create_frame_buffers(state);
     create_command_pool(state);
     create_vertex_buffer(state);
     create_index_buffer(state);
+    create_descriptor_pool(state);
+    create_uniform_buffers(state);
+    create_descriptor_sets(state);
     allocate_command_buffer(state);
     create_sync_objects(state);
 }

@@ -22,7 +22,12 @@ AttributeDescriptions get_attribute_descriptions(void);
 
 void create_vertex_buffer(State *state);
 void create_index_buffer(State *state);
+void create_uniform_buffers(State *state);
+
+void update_uniform_buffer(State* state, uint32_t currentImage);
+
 
 void destroy_vertex_buffer(State *state);
-
 void destroy_index_buffer(State *state);
+void destroy_uniform_buffers(State *state);
+

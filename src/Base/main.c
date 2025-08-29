@@ -11,6 +11,7 @@
 #include "renderer.h"
 #include "utils.h"
 #include "vertex_data.h"
+#include "descriptors.h"
 
 
 
@@ -45,13 +46,17 @@ void loop(State *state) {
         submit_command_buffer(state);
         present_swapchain_image(state);
 
-        state->current_frame = (state->current_frame + 1) % state->swap_chain_image_count;    
+        state->current_frame = (state->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;    
     }
 }
 
 void cleanup(State *state) {
     destroy_renderer(state);
     cleanup_swapchain(state);  
+    
+    destroy_uniform_buffers(state);
+    destroy_descriptor_sets(state);
+    destroy_descriptor_set_layout(state);
 
     destroy_index_buffer(state);
     destroy_vertex_buffer(state);

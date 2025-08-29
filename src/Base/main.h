@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <vulkan/vulkan_core.h>
 
+#define MAX_FRAMES_IN_FLIGHT 2
 
 typedef struct {
     VkPipeline graphics_pipeline;
@@ -18,6 +19,10 @@ typedef struct {
     VkSemaphore* finished_render_semaphore;
     VkFence* in_flight_fence;
     VkFramebuffer* frame_buffers;
+    VkDescriptorPool descriptor_pool;
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkDescriptorSet* descriptor_sets;
+    uint32_t descriptor_set_count;
 } Renderer;
 
 typedef struct State {
@@ -57,6 +62,9 @@ typedef struct State {
     VkBuffer index_buffer;
     VkDeviceMemory index_buffer_memmory;
 
+    VkBuffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
+    VkDeviceMemory uniform_buffers_memmory[MAX_FRAMES_IN_FLIGHT];
+    void* uniform_buffers_mapped[MAX_FRAMES_IN_FLIGHT];
 
     VkClearValue background_color;
     VkSwapchainKHR swap_chain;

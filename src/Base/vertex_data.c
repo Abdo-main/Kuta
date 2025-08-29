@@ -2,13 +2,20 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include <cglm/types.h>
+#include <cglm/cglm.h>        
+#include <cglm/affine.h>     
+#include <cglm/mat4.h>       
+#include <cglm/vec3.h>        
+#include <time.h> 
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
 #include "main.h"
 #include "vertex_data.h"
 #include "utils.h"
+#include "descriptors.h"
+
+#define MAX_FRAMES_IN_FLIGHT 2
 
 Vertex vertices[4] = {
     {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -187,4 +194,77 @@ void create_index_buffer(State *state) {
 void destroy_index_buffer(State *state){
     vkDestroyBuffer(state->device, state->index_buffer, state->allocator);
     vkFreeMemory(state->device, state->index_buffer_memmory, state->allocator);
+}
+
+void create_uniform_buffers(State *state) {
+    VkDeviceSize buffer_size = sizeof(UBO); // Assuming you have a ubo struct
+
+    // In C, we use arrays instead of vectors - make sure your State struct has these arrays:
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        create_buffer(state, buffer_size, 
+                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                     &state->uniform_buffers[i], 
+                     &state->uniform_buffers_memmory[i]);
+
+        vkMapMemory(state->device, state->uniform_buffers_memmory[i], 0, buffer_size, 0, 
+                   &state->uniform_buffers_mapped[i]);
+    }
+}
+void destroy_uniform_buffers(State *state){
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroyBuffer(state->device, state->uniform_buffers[i], state->allocator);
+        vkFreeMemory(state->device, state->uniform_buffers_memmory[i], state->allocator);
+    }
+}
+
+void update_uniform_buffer(State* state, uint32_t current_image) {
+    static int initialized = 0;
+    static struct timespec start_time;
+    
+    // Initialize start_time on first call
+    if (!initialized) {
+        clock_gettime(CLOCK_MONOTONIC, &start_time);
+        initialized = 1;
+    }
+    
+    // Get current time
+    struct timespec current_time;
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    
+    // Calculate elapsed time in seconds
+    float time = (current_time.tv_sec - start_time.tv_sec) + 
+                ((float)(current_time.tv_nsec - start_time.tv_nsec)) / 1000000000.0f;
+    
+    // Now use 'time' for your uniform buffer updates
+    // For example:
+    UBO ubo = {0};
+    
+    // Create model matrix with rotation over time
+    mat4 model;
+    glm_mat4_identity(model);
+    
+    vec3 axis = {0.0f, 0.0f, 1.0f};
+    float angle = time * glm_rad(90.0f); // Rotate 90 degrees per second
+    glm_rotate(model, angle, axis);
+    glm_mat4_copy(model, ubo.model);
+    
+    // Create view matrix (lookAt)
+    mat4 view;
+    vec3 eye = {2.0f, 2.0f, 2.0f};
+    vec3 center = {0.0f, 0.0f, 0.0f};
+    vec3 up = {0.0f, 0.0f, 1.0f};
+    glm_lookat(eye, center, up, view);
+    glm_mat4_copy(view, ubo.view);
+    
+    // Create projection matrix
+    mat4 proj;
+    glm_perspective(glm_rad(45.0f), 
+                   state->renderer.image_extent.width / (float)state->renderer.image_extent.height,
+                   0.1f, 10.0f, proj);
+    proj[1][1] *= -1; // Flip Y axis for Vulkan (GLM doesn't do this automatically in cglm)
+    glm_mat4_copy(proj, ubo.proj);
+    
+    // Copy to mapped uniform buffer
+    memcpy(state->uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
 }

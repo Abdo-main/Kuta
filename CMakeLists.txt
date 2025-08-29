@@ -16,7 +16,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Find required packages
 find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
+
+if (WIN32)
 include_directories("G:/Dev/cglm-0.9.6/include")
+endif()
 
 # Set source and include directories
 set(SRC_DIR src/Base)
@@ -31,6 +34,7 @@ add_executable(kuta
     ${SRC_DIR}/renderer.c
     ${SRC_DIR}/vertex_data.c
     ${SRC_DIR}/utils.c
+    ${SRC_DIR}/descriptors.c
 )
 
 # Platform-specific settings
@@ -41,7 +45,7 @@ if(WIN32)
     # target_link_libraries(kuta PRIVATE -lgdi32 -luser32 -lkernel32)
 elseif(UNIX)
     # Linux-specific
-    target_link_libraries(kuta PRIVATE glfw Vulkan::Vulkan cglm)
+    target_link_libraries(kuta PRIVATE glfw Vulkan::Vulkan cglm m)
 endif()
 
 # Include directories (CMake handles Vulkan/cglm includes if found)
