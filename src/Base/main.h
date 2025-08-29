@@ -42,6 +42,8 @@ typedef struct State {
     Renderer renderer;
     VkImage texture_image;
     VkDeviceMemory texture_image_memmory;
+    VkImageView texture_image_view;
+    VkSampler texture_sampler;
 
     //Vulkan
     uint32_t queue_family;

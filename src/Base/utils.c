@@ -52,6 +52,25 @@ void end_single_time_commands(State *state, VkCommandBuffer command_buffer) {
     vkFreeCommandBuffers(state->device, state->renderer.command_pool, 1, &command_buffer);
 }
 
+VkImageView create_image_view(State *state, VkImage image, VkFormat format) {
+    VkImageViewCreateInfo view_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = format,
+        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .subresourceRange.baseMipLevel = 0,
+        .subresourceRange.levelCount = 1,
+        .subresourceRange.baseArrayLayer = 0,
+        .subresourceRange.layerCount = 1,
+    };
+
+    VkImageView image_view;
+    EXPECT(vkCreateImageView(state->device, &view_info, state->allocator, &image_view), "Failed to create texture image view")
+
+    return image_view;
+}
+
 const uint32_t* read_file(const char* filename, size_t* size) {
     FILE* file = fopen(filename, "rb");
     if (!file) {

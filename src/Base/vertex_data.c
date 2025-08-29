@@ -19,10 +19,10 @@
 #define MAX_FRAMES_IN_FLIGHT 2
 
 Vertex vertices[4] = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},  // Bottom-left
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},   // Bottom-right
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},    // Top-right
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}    // Top-left
 };
 
 uint16_t indices[6] = {
@@ -40,7 +40,7 @@ VkVertexInputBindingDescription get_binding_description() {
 }
 
 AttributeDescriptions get_attribute_descriptions(void) {
-    AttributeDescriptions descs = {0}; // zero initialize
+    AttributeDescriptions descs = {0}; // zero initialize entire struct
     
     descs.items[0].binding = 0;
     descs.items[0].location = 0;
@@ -52,6 +52,13 @@ AttributeDescriptions get_attribute_descriptions(void) {
     descs.items[1].format = VK_FORMAT_R32G32B32_SFLOAT;
     descs.items[1].offset = offsetof(Vertex, color);
 
+    descs.items[2].binding = 0;
+    descs.items[2].location = 2;
+    descs.items[2].format = VK_FORMAT_R32G32_SFLOAT;
+    descs.items[2].offset = offsetof(Vertex, tex_coord);
+
+    descs.count = 3; // Set the count if you included it
+    
     return descs;
 }
 

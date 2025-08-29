@@ -53,6 +53,11 @@ void loop(State *state) {
 void cleanup(State *state) {
     destroy_renderer(state);
     cleanup_swapchain(state);  
+
+    vkDestroySampler(state->device, state->texture_sampler, state->allocator);
+    vkDestroyImageView(state->device, state->texture_image_view, state->allocator);
+    vkDestroyImage(state->device, state->texture_image, state->allocator);
+    vkFreeMemory(state->device, state->texture_image_memmory, state->allocator);
     
     destroy_uniform_buffers(state);
     destroy_descriptor_sets(state);

@@ -69,6 +69,11 @@ void select_queue_family(State *state) {
 }
 
 void create_device(State *state) {
+    VkPhysicalDeviceFeatures supported_features;
+    vkGetPhysicalDeviceFeatures(state->physical_device, &supported_features);
+    VkPhysicalDeviceFeatures enabledFeatures = {
+        .samplerAnisotropy = VK_TRUE,
+    };
     EXPECT(vkCreateDevice(state->physical_device, &(VkDeviceCreateInfo) {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pQueueCreateInfos = &(VkDeviceQueueCreateInfo){
@@ -80,6 +85,7 @@ void create_device(State *state) {
         .queueCreateInfoCount = 1,
         .enabledExtensionCount = 1,
         .ppEnabledExtensionNames = &(const char *) {VK_KHR_SWAPCHAIN_EXTENSION_NAME},
+        .pEnabledFeatures = &enabledFeatures,
     }, state->allocator, &state->device) , "failed to create device and queues")
 }
 

@@ -73,6 +73,13 @@ void create_graphics_pipeline(State *state){
     VkPipelineColorBlendAttachmentState color_blend_attachment_states[] = {
         {
             .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+            .blendEnable = VK_FALSE, // Add this
+            .srcColorBlendFactor = VK_BLEND_FACTOR_ONE, // Add proper blending
+            .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+            .colorBlendOp = VK_BLEND_OP_ADD,
+            .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+            .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+            .alphaBlendOp = VK_BLEND_OP_ADD,
         }
     };
 
@@ -98,7 +105,7 @@ void create_graphics_pipeline(State *state){
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             .vertexBindingDescriptionCount = 1,
             .pVertexBindingDescriptions = &binding_description,
-            .vertexAttributeDescriptionCount = 2,
+            .vertexAttributeDescriptionCount = attribute_descriptions.count,
             .pVertexAttributeDescriptions = attribute_descriptions.items,
         },
         .pInputAssemblyState = &(VkPipelineInputAssemblyStateCreateInfo) {
@@ -112,6 +119,14 @@ void create_graphics_pipeline(State *state){
             .scissorCount = sizeof(scissors)/sizeof(*scissors),
             .pScissors = scissors,
         },
+        .pDepthStencilState = &(VkPipelineDepthStencilStateCreateInfo){
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+            .depthTestEnable = VK_TRUE,
+            .depthWriteEnable = VK_TRUE,
+            .depthCompareOp = VK_COMPARE_OP_LESS,
+            .depthBoundsTestEnable = VK_FALSE,
+            .stencilTestEnable = VK_FALSE,
+        }, 
         .pRasterizationState = &(VkPipelineRasterizationStateCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             .lineWidth = 1.0,
@@ -368,7 +383,9 @@ void create_renderer(State *state){
     create_graphics_pipeline(state);
     create_frame_buffers(state);
     create_command_pool(state);
-    create_texture_image();
+    create_texture_image(state, "./textures/twitch.jpg");
+    create_texture_image_view(state);
+    create_texture_sampler(state);
     create_vertex_buffer(state);
     create_index_buffer(state);
     create_descriptor_pool(state);

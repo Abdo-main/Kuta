@@ -7,10 +7,12 @@
 typedef struct {
     vec2 pos;
     vec3 color;
+    vec2 tex_coord;
 }Vertex;
 
 typedef struct {
-    VkVertexInputAttributeDescription items[2];
+    VkVertexInputAttributeDescription items[3];
+    size_t count;
 } AttributeDescriptions;
 
 extern Vertex vertices[4];
