@@ -7,6 +7,7 @@
 #include "main.h"
 #include "renderer.h"
 #include "utils.h"
+#include "vertex_data.h"
 
 
 void acquire_next_swapchain_image(State *state) {
@@ -51,6 +52,9 @@ void present_swapchain_image(State *state) {
 }
 
 void cleanup_swapchain(State *state) {
+    vkDestroyImageView(state->device, state->depth_image_view, state->allocator);
+    vkDestroyImage(state->device, state->depth_image, state->allocator);
+    vkFreeMemory(state->device, state->depth_image_memmory, state->allocator);
     if (state->swap_chain_image_views) {
         for (uint32_t i = 0; i < state->swap_chain_image_count; i++) {
             vkDestroyImageView(state->device, state->swap_chain_image_views[i], state->allocator);
@@ -212,10 +216,17 @@ void create_swapchain(State *state) {
 }
 
 void recreate_swapchain(State *state) {
+    int width = 0, height = 0;
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(state->window, &width, &height);
+        glfwWaitEvents();
+    }
     vkDeviceWaitIdle(state->device);
 
     destroy_frame_buffers(state);
     cleanup_swapchain(state);
 
     create_swapchain(state);
+    create_depth_resources(state);
+    create_frame_buffers(state);
 }

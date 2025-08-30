@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 #include <cglm/cglm.h>        
 #include <cglm/affine.h>     
 #include <cglm/mat4.h>       
@@ -12,21 +13,27 @@
 
 #include "main.h"
 #include "vertex_data.h"
+#include "textures.h"
 #include "utils.h"
 #include "descriptors.h"
 #include "utils.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
-Vertex vertices[4] = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},  // Bottom-left
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},   // Bottom-right
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},    // Top-right
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}    // Top-left
+Vertex vertices[8] = {
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 };
 
-uint16_t indices[6] = {
-    0, 1, 2, 2, 3, 0
+uint16_t indices[12] = {
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4
 };
 
 VkVertexInputBindingDescription get_binding_description() {
@@ -44,7 +51,7 @@ AttributeDescriptions get_attribute_descriptions(void) {
     
     descs.items[0].binding = 0;
     descs.items[0].location = 0;
-    descs.items[0].format = VK_FORMAT_R32G32_SFLOAT;
+    descs.items[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     descs.items[0].offset = offsetof(Vertex, pos);
 
     descs.items[1].binding = 0;
@@ -249,3 +256,51 @@ void update_uniform_buffer(State* state, uint32_t current_image) {
     // Copy to mapped uniform buffer
     memcpy(state->uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
 }
+
+VkFormat find_supported_format(State *state,
+                               VkFormat *candidates,
+                               size_t candidate_count,
+                               VkImageTiling tiling,
+                               VkFormatFeatureFlags features) {
+    for (size_t i = 0; i < candidate_count; i++) {
+        VkFormat format = candidates[i];
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(state->physical_device, format, &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR &&
+            (props.linearTilingFeatures & features) == features) {
+            return format;
+        } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+                   (props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+
+    return VK_FORMAT_UNDEFINED;
+}
+
+VkFormat find_depth_format(State *state) {
+    VkFormat candidates[] = {
+       VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT 
+    };
+    return find_supported_format(state, candidates, sizeof(candidates)/sizeof(candidates[0]), 
+                                 VK_IMAGE_TILING_OPTIMAL,
+                                 VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
+bool has_stencil_component(VkFormat format) {
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+
+void create_depth_resources(State *state) {
+    VkFormat depth_format = find_depth_format(state);
+
+    create_image(state, state->renderer.image_extent.width, state->renderer.image_extent.height, depth_format,
+                 VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                 &state->depth_image, &state->depth_image_memmory);
+
+    state->depth_image_view = create_image_view(state, state->depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT);
+    transition_image_layout(state->depth_image, depth_format, state, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+}
+

@@ -88,6 +88,7 @@ int main(void) {
         .window_height = 600,
         .window_fullscreen = false,
         .api_version = VK_API_VERSION_1_4,
+        .background_color = (VkClearColorValue){{1.0f, 0.5f, 0.0f, 1.0f}}
     };
 
     init(&state);

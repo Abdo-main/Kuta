@@ -5,7 +5,7 @@
 #include "main.h"
 
 typedef struct {
-    vec2 pos;
+    vec3 pos;
     vec3 color;
     vec2 tex_coord;
 }Vertex;
@@ -15,8 +15,8 @@ typedef struct {
     size_t count;
 } AttributeDescriptions;
 
-extern Vertex vertices[4];
-extern uint16_t indices[6];
+extern Vertex vertices[8];
+extern uint16_t indices[12];
 
 VkVertexInputBindingDescription get_binding_description();
 
@@ -33,7 +33,9 @@ void create_buffer(State *state, VkDeviceSize size,
        VkBuffer* buffer, 
        VkDeviceMemory* buffer_memory);
 
+void create_depth_resources(State *state);
 
+VkFormat find_depth_format(State *state);
 
 void update_uniform_buffer(State* state, uint32_t currentImage);
 

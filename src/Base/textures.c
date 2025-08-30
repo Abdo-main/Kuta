@@ -12,7 +12,9 @@
 void create_image(State *state, uint32_t width, uint32_t height,
                   VkFormat format, VkImageTiling tiling,
                   VkImageUsageFlags usage,
-                  VkMemoryPropertyFlags properties
+                  VkMemoryPropertyFlags properties,
+                  VkImage* image,
+                  VkDeviceMemory* image_memory
                   ) {
 
     VkImageCreateInfo image_info = {
@@ -31,10 +33,10 @@ void create_image(State *state, uint32_t width, uint32_t height,
         .samples = VK_SAMPLE_COUNT_1_BIT,
     };
 
-    EXPECT(vkCreateImage(state->device, &image_info, state->allocator, &state->texture_image), "Failed to create image")
+    EXPECT(vkCreateImage(state->device, &image_info, state->allocator, image), "Failed to create image")
 
     VkMemoryRequirements mem_requirements;
-    vkGetImageMemoryRequirements(state->device, state->texture_image, &mem_requirements);
+    vkGetImageMemoryRequirements(state->device, *image, &mem_requirements);
 
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -42,8 +44,8 @@ void create_image(State *state, uint32_t width, uint32_t height,
         .memoryTypeIndex = find_memory_type(state, mem_requirements.memoryTypeBits, properties),
     };
 
-    EXPECT(vkAllocateMemory(state->device, &alloc_info, state->allocator, &state->texture_image_memmory), "Failed to allocate memmory for image")
-    vkBindImageMemory(state->device, state->texture_image, state->texture_image_memmory, 0);
+    EXPECT(vkAllocateMemory(state->device, &alloc_info, state->allocator, image_memory), "Failed to allocate memmory for image")
+    vkBindImageMemory(state->device, *image, *image_memory, 0);
 }
 
 void create_texture_image(State *state, char* filename) {
@@ -71,7 +73,9 @@ void create_texture_image(State *state, char* filename) {
                  VK_FORMAT_R8G8B8A8_SRGB,
                  VK_IMAGE_TILING_OPTIMAL,
                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                 &state->texture_image,
+                 &state->texture_image_memmory);
 
     transition_image_layout(state->texture_image, VK_FORMAT_R8G8B8A8_SRGB, state, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copy_buffer_to_image(state, staging_buffer, state->texture_image, (uint32_t)tex_width, (uint32_t)tex_height);
@@ -115,6 +119,12 @@ void transition_image_layout(VkImage image, VkFormat format, State *state, VkIma
 
         source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    } else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destination_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     } else {
        printf("unsupported layout transition!");
     }
@@ -164,7 +174,7 @@ void copy_buffer_to_image(State *state, VkBuffer buffer, VkImage image, uint32_t
 }
 
 void create_texture_image_view(State *state) {
-    state->texture_image_view = create_image_view(state, state->texture_image, VK_FORMAT_R8G8B8A8_SRGB);
+    state->texture_image_view = create_image_view(state, state->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void create_texture_sampler(State *state) {

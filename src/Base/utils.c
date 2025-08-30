@@ -52,13 +52,13 @@ void end_single_time_commands(State *state, VkCommandBuffer command_buffer) {
     vkFreeCommandBuffers(state->device, state->renderer.command_pool, 1, &command_buffer);
 }
 
-VkImageView create_image_view(State *state, VkImage image, VkFormat format) {
+VkImageView create_image_view(State *state, VkImage image, VkFormat format, VkImageAspectFlags aspect_Flags) {
     VkImageViewCreateInfo view_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = format,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .subresourceRange.aspectMask = aspect_Flags,
         .subresourceRange.baseMipLevel = 0,
         .subresourceRange.levelCount = 1,
         .subresourceRange.baseArrayLayer = 0,

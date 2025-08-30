@@ -125,8 +125,8 @@ void create_graphics_pipeline(State *state){
             .depthWriteEnable = VK_TRUE,
             .depthCompareOp = VK_COMPARE_OP_LESS,
             .depthBoundsTestEnable = VK_FALSE,
-            .stencilTestEnable = VK_FALSE,
-        }, 
+            .stencilTestEnable = VK_FALSE, 
+        },
         .pRasterizationState = &(VkPipelineRasterizationStateCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             .lineWidth = 1.0,
@@ -161,6 +161,7 @@ void destroy_graphics_pipeline(State *state){
 
 void create_render_pass(State *state){
 
+    
     VkFormat image_format = state->image_format;
 
     VkAttachmentReference color_attachment_refrences[] = {
@@ -170,15 +171,25 @@ void create_render_pass(State *state){
         }
     };
 
-    VkSubpassDescription subpass_descriptions[] = {
-        {
-            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-            .colorAttachmentCount = 1,
-            .pColorAttachments = color_attachment_refrences,
-        }
+    VkAttachmentDescription depth_attachment = {
+        .format = find_depth_format(state),
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
-    VkAttachmentDescription attachment_descriptions[] = {
+    VkAttachmentReference depth_attachment_ref = {
+        .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+
+
+    VkAttachmentDescription attachment_descriptions[2] = {
+        /* color */
         {
             .format = image_format,
             .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -189,14 +200,45 @@ void create_render_pass(State *state){
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         },
+        /* depth */
+        {
+            .format = find_depth_format(state),
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        } 
+    };
+    VkSubpassDescription subpass_descriptions[] = {
+        {
+            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = color_attachment_refrences,
+            .pDepthStencilAttachment = &depth_attachment_ref,
+        }
+    };
+
+    VkSubpassDependency dependency = {
+        /* common robust setup from the tutorial */
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = 0,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
     };
 
     EXPECT(vkCreateRenderPass(state->device, &(VkRenderPassCreateInfo) {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .subpassCount = sizeof(subpass_descriptions)/sizeof(*subpass_descriptions),
-        .pSubpasses = (const VkSubpassDescription *)subpass_descriptions,
-        .attachmentCount = sizeof(attachment_descriptions)/sizeof(*attachment_descriptions),
+        .subpassCount = 1,
+        .pSubpasses = subpass_descriptions,
+        .attachmentCount = 2,
         .pAttachments = attachment_descriptions,
+        .dependencyCount = 1,
+        .pDependencies = &dependency,
     }, state->allocator, &state->renderer.render_pass), "Failed to create a render pass")
 }
 
@@ -210,15 +252,21 @@ void create_frame_buffers(State *state) {
     EXPECT(state->renderer.frame_buffers == NULL, "Couldn't allocate memory for framebuffers array")
     VkExtent2D frame_buffers_extent = state->renderer.image_extent;
 
+    
+
     for (int framebufferIndex = 0; framebufferIndex < frame_buffer_count; ++framebufferIndex) {
+        VkImageView attachments[2] = {
+            state->swap_chain_image_views[framebufferIndex],
+            state->depth_image_view,
+        };
         EXPECT(vkCreateFramebuffer(state->device, &(VkFramebufferCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .layers = 1,
             .renderPass = state->renderer.render_pass,
             .width = frame_buffers_extent.width,
             .height = frame_buffers_extent.height,
-            .attachmentCount = 1,
-            .pAttachments = &state->swap_chain_image_views[framebufferIndex],
+            .attachmentCount = sizeof(attachments)/sizeof(attachments[0]),
+            .pAttachments = attachments,
         }, state->allocator, &state->renderer.frame_buffers[framebufferIndex]), "Couldn't create framebuffer %i", framebufferIndex)
     }
 }
@@ -310,11 +358,20 @@ void record_command_buffer(State *state) {
     // Reset the command buffer
     vkResetCommandBuffer(command_buffer, 0);
 
+
     EXPECT(vkBeginCommandBuffer(command_buffer, &(VkCommandBufferBeginInfo) {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
     }), "Couldn't begin command buffer for frame");
 
-    VkClearValue clear_values[] = { state->background_color };
+    VkClearValue clear_values[2] = { 
+        {
+            .color = state->background_color,
+        },
+        {
+            .depthStencil = {1.0f, 0},
+        }
+        
+    };
     uint32_t image_index = state->acquired_image_index;
     
     vkCmdBeginRenderPass(command_buffer, &(VkRenderPassBeginInfo) {
@@ -322,7 +379,7 @@ void record_command_buffer(State *state) {
         .renderPass = state->renderer.render_pass,
         .framebuffer = state->renderer.frame_buffers[image_index],
         .renderArea = (VkRect2D) { .extent = state->renderer.image_extent },
-        .clearValueCount = 1,
+        .clearValueCount = (uint32_t)(sizeof(clear_values)/sizeof(clear_values[0])),
         .pClearValues = clear_values,
     }, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -381,8 +438,9 @@ void create_renderer(State *state){
     create_render_pass(state);
     create_descriptor_set_layout(state);
     create_graphics_pipeline(state);
-    create_frame_buffers(state);
     create_command_pool(state);
+    create_depth_resources(state);
+    create_frame_buffers(state);
     create_texture_image(state, "./textures/twitch.jpg");
     create_texture_image_view(state);
     create_texture_sampler(state);

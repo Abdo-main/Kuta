@@ -23,6 +23,7 @@ typedef struct {
     VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorSet* descriptor_sets;
     uint32_t descriptor_set_count;
+    
 } Renderer;
 
 typedef struct State {
@@ -40,10 +41,15 @@ typedef struct State {
 
     VkFormat image_format;
     Renderer renderer;
+
     VkImage texture_image;
     VkDeviceMemory texture_image_memmory;
     VkImageView texture_image_view;
     VkSampler texture_sampler;
+
+    VkImage depth_image;
+    VkDeviceMemory depth_image_memmory;
+    VkImageView depth_image_view;
 
     //Vulkan
     uint32_t queue_family;
@@ -70,7 +76,7 @@ typedef struct State {
     VkDeviceMemory uniform_buffers_memmory[MAX_FRAMES_IN_FLIGHT];
     void* uniform_buffers_mapped[MAX_FRAMES_IN_FLIGHT];
 
-    VkClearValue background_color;
+    VkClearColorValue background_color;
     VkSwapchainKHR swap_chain;
     VkImage *swap_chain_images;
     VkImageView *swap_chain_image_views;
