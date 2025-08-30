@@ -27,6 +27,7 @@ void create_vertex_buffer(State *state);
 void create_index_buffer(State *state);
 void create_uniform_buffers(State *state);
 
+bool has_stencil_component(VkFormat format);
 void create_buffer(State *state, VkDeviceSize size,
        VkBufferUsageFlags usage,
        VkMemoryPropertyFlags properties,
