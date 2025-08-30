@@ -10,11 +10,11 @@
 #include "vertex_data.h"
 
 
-void acquire_next_swapchain_image(State *state) {
+void acquire_next_swapchain_image(State *state, VkCore *vk_core) {
     Renderer* renderer = &state->renderer;
     uint32_t image_index;
     VkResult result = vkAcquireNextImageKHR(
-        state->device,
+        vk_core->device,
         state->swap_chain,
         UINT64_MAX,
         renderer->acquired_image_semaphore[state->current_frame],
@@ -24,14 +24,14 @@ void acquire_next_swapchain_image(State *state) {
     state->acquired_image_index = image_index;
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreate_swapchain(state);
+        recreate_swapchain(state, vk_core);
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         EXPECT(2, "failed to acquire swap chain image!");
     }
 }
 
-void present_swapchain_image(State *state) {
+void present_swapchain_image(State *state, VkCore *vk_core) {
     uint32_t image_index = state->acquired_image_index;
     VkPresentInfoKHR present_info = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -42,22 +42,22 @@ void present_swapchain_image(State *state) {
         .pWaitSemaphores = &state->renderer.finished_render_semaphore[image_index],
     };
     
-    VkResult result = vkQueuePresentKHR(state->queue, &present_info);
+    VkResult result = vkQueuePresentKHR(vk_core->graphics_queue, &present_info);
     
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        recreate_swapchain(state);
+        recreate_swapchain(state, vk_core);
     } else if (result != VK_SUCCESS) {
         EXPECT(2, "Couldn't present swapchain image %i", state->acquired_image_index);
     }
 }
 
-void cleanup_swapchain(State *state) {
-    vkDestroyImageView(state->device, state->depth_image_view, state->allocator);
-    vkDestroyImage(state->device, state->depth_image, state->allocator);
-    vkFreeMemory(state->device, state->depth_image_memmory, state->allocator);
+void cleanup_swapchain(State *state, VkCore *vk_core) {
+    vkDestroyImageView(vk_core->device, state->depth_image_view, vk_core->allocator);
+    vkDestroyImage(vk_core->device, state->depth_image, vk_core->allocator);
+    vkFreeMemory(vk_core->device, state->depth_image_memmory, vk_core->allocator);
     if (state->swap_chain_image_views) {
         for (uint32_t i = 0; i < state->swap_chain_image_count; i++) {
-            vkDestroyImageView(state->device, state->swap_chain_image_views[i], state->allocator);
+            vkDestroyImageView(vk_core->device, state->swap_chain_image_views[i], vk_core->allocator);
         }
         free(state->swap_chain_image_views);
         free(state->swap_chain_images);
@@ -66,7 +66,7 @@ void cleanup_swapchain(State *state) {
     }
     
     if (state->swap_chain) {
-        vkDestroySwapchainKHR(state->device, state->swap_chain, state->allocator);
+        vkDestroySwapchainKHR(vk_core->device, state->swap_chain, vk_core->allocator);
         state->swap_chain = VK_NULL_HANDLE;
     }
 }
@@ -147,13 +147,13 @@ VkExtent2D choose_extent(GLFWwindow *window, VkSurfaceCapabilitiesKHR capabiliti
     return extent;
 }
 
-void get_swapchain_images_and_create_image_views(State *state, VkSurfaceFormatKHR format) {
+void get_swapchain_images_and_create_image_views(State *state, VkSurfaceFormatKHR format, VkCore *vk_core) {
     // Query the number of images in the new swapchain
-    EXPECT(vkGetSwapchainImagesKHR(state->device, state->swap_chain, &state->swap_chain_image_count, NULL), "Failed to get swap chain images count")
+    EXPECT(vkGetSwapchainImagesKHR(vk_core->device, state->swap_chain, &state->swap_chain_image_count, NULL), "Failed to get swap chain images count")
     // Allocate based on the number of images in the new swapchain
     state->swap_chain_images = malloc(state->swap_chain_image_count * sizeof(VkImage));
     EXPECT(!state->swap_chain_images, "Failed to allocate memmory for swap chain images")
-    EXPECT(vkGetSwapchainImagesKHR(state->device, state->swap_chain, &state->swap_chain_image_count, state->swap_chain_images), "Failed to get swap chain images")
+    EXPECT(vkGetSwapchainImagesKHR(vk_core->device, state->swap_chain, &state->swap_chain_image_count, state->swap_chain_images), "Failed to get swap chain images")
 
     // Allocate array for image views
     state->swap_chain_image_views = malloc(state->swap_chain_image_count * sizeof(VkImageView));
@@ -162,7 +162,7 @@ void get_swapchain_images_and_create_image_views(State *state, VkSurfaceFormatKH
 
     // Create an image view for each swapchain image
     for (uint32_t i = 0; i < state->swap_chain_image_count; i++) {
-        EXPECT(vkCreateImageView(state->device, &(VkImageViewCreateInfo){
+        EXPECT(vkCreateImageView(vk_core->device, &(VkImageViewCreateInfo){
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .format = format.format,
             .image = state->swap_chain_images[i],
@@ -173,31 +173,31 @@ void get_swapchain_images_and_create_image_views(State *state, VkSurfaceFormatKH
                 .levelCount = 1,
             },
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        }, state->allocator, &state->swap_chain_image_views[i]), "Failed to create Image View %i", i)
+        }, vk_core->allocator, &state->swap_chain_image_views[i]), "Failed to create Image View %i", i)
     }
 }
 
-void create_swapchain(State *state) {
+void create_swapchain(State *state, VkCore *vk_core) {
     // Query the surface capabilities for the current physical device and surface
-    VkSurfaceCapabilitiesKHR capabilities = get_capabilities(&state->physical_device, &state->surface);
+    VkSurfaceCapabilitiesKHR capabilities = get_capabilities(&vk_core->physical_device, &vk_core->surface);
     
     //Get format
-    VkSurfaceFormatKHR format = get_formats(&state->physical_device, &state->surface);
+    VkSurfaceFormatKHR format = get_formats(&vk_core->physical_device, &vk_core->surface);
     // select_present_mode
-    VkPresentModeKHR present_mode = select_present_mode(&state->physical_device, &state->surface);
+    VkPresentModeKHR present_mode = select_present_mode(&vk_core->physical_device, &vk_core->surface);
 
     state->image_format = format.format;
     // choose_extent
     state->renderer.image_extent = choose_extent(state->window, capabilities);
 
-    cleanup_swapchain(state);
+    cleanup_swapchain(state, vk_core);
 
     // Create the swapchain with the chosen parameters
-    EXPECT(vkCreateSwapchainKHR(state->device, &(VkSwapchainCreateInfoKHR){
+    EXPECT(vkCreateSwapchainKHR(vk_core->device, &(VkSwapchainCreateInfoKHR){
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = state->surface,
+        .surface = vk_core->surface,
         .queueFamilyIndexCount = 1,
-        .pQueueFamilyIndices = &state->queue_family,
+        .pQueueFamilyIndices = &vk_core->graphics_queue_family,
         .clipped = true,
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .imageArrayLayers = 1,
@@ -210,23 +210,23 @@ void create_swapchain(State *state) {
         .imageColorSpace = format.colorSpace,
         .presentMode = present_mode,
         .minImageCount = clamp(3, capabilities.minImageCount, capabilities.maxImageCount ? capabilities.maxImageCount : UINT32_MAX),
-    }, state->allocator, &state->swap_chain), "Failed to create swap chain")
+    }, vk_core->allocator, &state->swap_chain), "Failed to create swap chain")
 
-   get_swapchain_images_and_create_image_views(state, format);
+   get_swapchain_images_and_create_image_views(state, format, vk_core);
 }
 
-void recreate_swapchain(State *state) {
+void recreate_swapchain(State *state, VkCore *vk_core) {
     int width = 0, height = 0;
     while (width == 0 || height == 0) {
         glfwGetFramebufferSize(state->window, &width, &height);
         glfwWaitEvents();
     }
-    vkDeviceWaitIdle(state->device);
+    vkDeviceWaitIdle(vk_core->device);
 
-    destroy_frame_buffers(state);
-    cleanup_swapchain(state);
+    destroy_frame_buffers(state, vk_core);
+    cleanup_swapchain(state, vk_core);
 
-    create_swapchain(state);
-    create_depth_resources(state);
-    create_frame_buffers(state);
+    create_swapchain(state, vk_core);
+    create_depth_resources(state, vk_core);
+    create_frame_buffers(state, vk_core);
 }

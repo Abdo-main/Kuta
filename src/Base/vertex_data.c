@@ -54,9 +54,9 @@ AttributeDescriptions get_attribute_descriptions(void) {
     return descs;
 }
 
-uint32_t find_memory_type(State *state, uint32_t type_filter, VkMemoryPropertyFlags properties) {
+uint32_t find_memory_type(State *state, uint32_t type_filter, VkMemoryPropertyFlags properties, VkCore *vk_core) {
     VkPhysicalDeviceMemoryProperties mem_properties;
-    vkGetPhysicalDeviceMemoryProperties(state->physical_device, &mem_properties);
+    vkGetPhysicalDeviceMemoryProperties(vk_core->physical_device, &mem_properties);
 
     for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
         if ((type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -67,26 +67,27 @@ uint32_t find_memory_type(State *state, uint32_t type_filter, VkMemoryPropertyFl
     return 0;
 }
 
-void alloc_buffer(State *state, VkBuffer *buffer, VkDeviceMemory *buffer_memory, VkMemoryPropertyFlags properties){
+void alloc_buffer(State *state, VkBuffer *buffer, VkDeviceMemory *buffer_memory, VkMemoryPropertyFlags properties, VkCore *vk_core){
     VkMemoryRequirements mem_requirements;
-    vkGetBufferMemoryRequirements(state->device, *(buffer), &mem_requirements);
+    vkGetBufferMemoryRequirements(vk_core->device, *(buffer), &mem_requirements);
 
 
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = mem_requirements.size,
-        .memoryTypeIndex = find_memory_type(state, mem_requirements.memoryTypeBits, properties),
+        .memoryTypeIndex = find_memory_type(state, mem_requirements.memoryTypeBits, properties, vk_core),
     };
 
-    EXPECT(vkAllocateMemory(state->device, &alloc_info, state->allocator, buffer_memory), "Failed to allocate for vertex_buffer_memory")
-    vkBindBufferMemory(state->device, *(buffer), *(buffer_memory), 0);
+    EXPECT(vkAllocateMemory(vk_core->device, &alloc_info, vk_core->allocator, buffer_memory), "Failed to allocate for vertex_buffer_memory")
+    vkBindBufferMemory(vk_core->device, *(buffer), *(buffer_memory), 0);
 }
 
 void create_buffer(State *state, VkDeviceSize size,
        VkBufferUsageFlags usage,
        VkMemoryPropertyFlags properties,
        VkBuffer* buffer, 
-       VkDeviceMemory* buffer_memory) {
+       VkDeviceMemory* buffer_memory,
+       VkCore *vk_core) {
 
     VkBufferCreateInfo buffer_info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -94,13 +95,13 @@ void create_buffer(State *state, VkDeviceSize size,
         .usage = usage,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
-    EXPECT(vkCreateBuffer(state->device, &buffer_info, state->allocator, buffer), "failed to create vertex buffer!")
+    EXPECT(vkCreateBuffer(vk_core->device, &buffer_info, vk_core->allocator, buffer), "failed to create vertex buffer!")
 
-    alloc_buffer(state, buffer, buffer_memory, properties);
+    alloc_buffer(state, buffer, buffer_memory, properties, vk_core);
 }
 
-void copy_buffer(State *state, VkDeviceSize size, VkBuffer src_buffer, VkBuffer dst_buffer) {
-    VkCommandBuffer command_buffer = begin_single_time_commands(state);
+void copy_buffer(State *state, VkDeviceSize size, VkBuffer src_buffer, VkBuffer dst_buffer, VkCore *vk_core) {
+    VkCommandBuffer command_buffer = begin_single_time_commands(state, vk_core);
 
     VkBufferCopy copy_region = {
         .srcOffset = 0,
@@ -109,67 +110,67 @@ void copy_buffer(State *state, VkDeviceSize size, VkBuffer src_buffer, VkBuffer 
     };
     vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
     
-    end_single_time_commands(state, command_buffer);
+    end_single_time_commands(state, command_buffer, vk_core);
 }
 
-void create_vertex_buffer(State *state) {
+void create_vertex_buffer(State *state, VkCore *vk_core) {
     size_t vertex_count = state->vertex_count;
     VkDeviceSize buffer_size = sizeof(state->vertices[0]) * vertex_count;
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-    &state->staging_buffer, &state->staging_buffer_memmory);
+    &state->staging_buffer, &state->staging_buffer_memmory, vk_core);
         
     void* data;
-    vkMapMemory(state->device, state->staging_buffer_memmory, 0, buffer_size, 0, &data);
+    vkMapMemory(vk_core->device, state->staging_buffer_memmory, 0, buffer_size, 0, &data);
        memcpy(data, state->vertices, (size_t)buffer_size);
-    vkUnmapMemory(state->device, state->staging_buffer_memmory);
+    vkUnmapMemory(vk_core->device, state->staging_buffer_memmory);
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-    &state->vertex_buffer, &state->vertex_buffer_memmory);
+    &state->vertex_buffer, &state->vertex_buffer_memmory, vk_core);
 
-    copy_buffer(state, buffer_size, state->staging_buffer, state->vertex_buffer);
+    copy_buffer(state, buffer_size, state->staging_buffer, state->vertex_buffer, vk_core);
 
-    vkDestroyBuffer(state->device, state->staging_buffer, state->allocator);
-    vkFreeMemory(state->device, state->staging_buffer_memmory, state->allocator);
+    vkDestroyBuffer(vk_core->device, state->staging_buffer, vk_core->allocator);
+    vkFreeMemory(vk_core->device, state->staging_buffer_memmory, vk_core->allocator);
 }
 
-void destroy_vertex_buffer(State *state){
-    vkDestroyBuffer(state->device, state->vertex_buffer, state->allocator);
-    vkFreeMemory(state->device, state->vertex_buffer_memmory, state->allocator);
+void destroy_vertex_buffer(State *state, VkCore *vk_core){
+    vkDestroyBuffer(vk_core->device, state->vertex_buffer, vk_core->allocator);
+    vkFreeMemory(vk_core->device, state->vertex_buffer_memmory, vk_core->allocator);
 }
 
-void create_index_buffer(State *state) {
+void create_index_buffer(State *state, VkCore *vk_core) {
     size_t indices_count = state->index_count;
     VkDeviceSize buffer_size = sizeof(state->indices[0]) * indices_count;
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-    &state->staging_buffer, &state->staging_buffer_memmory);
+    &state->staging_buffer, &state->staging_buffer_memmory, vk_core);
         
     void* data;
-    vkMapMemory(state->device, state->staging_buffer_memmory, 0, buffer_size, 0, &data);
+    vkMapMemory(vk_core->device, state->staging_buffer_memmory, 0, buffer_size, 0, &data);
        memcpy(data, state->indices, (size_t)buffer_size);
-    vkUnmapMemory(state->device, state->staging_buffer_memmory);
+    vkUnmapMemory(vk_core->device, state->staging_buffer_memmory);
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-    &state->index_buffer, &state->index_buffer_memmory);
+    &state->index_buffer, &state->index_buffer_memmory, vk_core);
 
-    copy_buffer(state, buffer_size, state->staging_buffer, state->index_buffer);
+    copy_buffer(state, buffer_size, state->staging_buffer, state->index_buffer, vk_core);
 
-    vkDestroyBuffer(state->device, state->staging_buffer, state->allocator);
-    vkFreeMemory(state->device, state->staging_buffer_memmory, state->allocator);
+    vkDestroyBuffer(vk_core->device, state->staging_buffer, vk_core->allocator);
+    vkFreeMemory(vk_core->device, state->staging_buffer_memmory, vk_core->allocator);
 }
 
-void destroy_index_buffer(State *state){
-    vkDestroyBuffer(state->device, state->index_buffer, state->allocator);
-    vkFreeMemory(state->device, state->index_buffer_memmory, state->allocator);
+void destroy_index_buffer(State *state, VkCore *vk_core){
+    vkDestroyBuffer(vk_core->device, state->index_buffer, vk_core->allocator);
+    vkFreeMemory(vk_core->device, state->index_buffer_memmory, vk_core->allocator);
 }
 
-void create_uniform_buffers(State *state) {
+void create_uniform_buffers(State *state, VkCore *vk_core) {
     VkDeviceSize buffer_size = sizeof(UBO); // Assuming you have a ubo struct
 
     // In C, we use arrays instead of vectors - make sure your State struct has these arrays:
@@ -178,16 +179,16 @@ void create_uniform_buffers(State *state) {
                      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                      &state->uniform_buffers[i], 
-                     &state->uniform_buffers_memmory[i]);
+                     &state->uniform_buffers_memmory[i], vk_core);
 
-        vkMapMemory(state->device, state->uniform_buffers_memmory[i], 0, buffer_size, 0, 
+        vkMapMemory(vk_core->device, state->uniform_buffers_memmory[i], 0, buffer_size, 0, 
                    &state->uniform_buffers_mapped[i]);
     }
 }
-void destroy_uniform_buffers(State *state){
+void destroy_uniform_buffers(State *state, VkCore *vk_core){
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroyBuffer(state->device, state->uniform_buffers[i], state->allocator);
-        vkFreeMemory(state->device, state->uniform_buffers_memmory[i], state->allocator);
+        vkDestroyBuffer(vk_core->device, state->uniform_buffers[i], vk_core->allocator);
+        vkFreeMemory(vk_core->device, state->uniform_buffers_memmory[i], vk_core->allocator);
     }
 }
 
@@ -255,11 +256,11 @@ VkFormat find_supported_format(State *state,
                                VkFormat *candidates,
                                size_t candidate_count,
                                VkImageTiling tiling,
-                               VkFormatFeatureFlags features) {
+                               VkFormatFeatureFlags features, VkCore *vk_core) {
     for (size_t i = 0; i < candidate_count; i++) {
         VkFormat format = candidates[i];
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(state->physical_device, format, &props);
+        vkGetPhysicalDeviceFormatProperties(vk_core->physical_device, format, &props);
 
         if (tiling == VK_IMAGE_TILING_LINEAR &&
             (props.linearTilingFeatures & features) == features) {
@@ -273,13 +274,13 @@ VkFormat find_supported_format(State *state,
     return VK_FORMAT_UNDEFINED;
 }
 
-VkFormat find_depth_format(State *state) {
+VkFormat find_depth_format(State *state, VkCore *vk_core) {
     VkFormat candidates[] = {
        VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT 
     };
     return find_supported_format(state, candidates, sizeof(candidates)/sizeof(candidates[0]), 
                                  VK_IMAGE_TILING_OPTIMAL,
-                                 VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+                                 VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, vk_core);
 }
 
 bool has_stencil_component(VkFormat format) {
@@ -287,14 +288,14 @@ bool has_stencil_component(VkFormat format) {
 }
 
 
-void create_depth_resources(State *state) {
-    VkFormat depth_format = find_depth_format(state);
+void create_depth_resources(State *state, VkCore *vk_core) {
+    VkFormat depth_format = find_depth_format(state, vk_core);
 
     create_image(state, state->renderer.image_extent.width, state->renderer.image_extent.height, depth_format,
                  VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 &state->depth_image, &state->depth_image_memmory);
+                 &state->depth_image, &state->depth_image_memmory, vk_core);
 
-    state->depth_image_view = create_image_view(state, state->depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT);
-    transition_image_layout(state->depth_image, depth_format, state, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    state->depth_image_view = create_image_view(state, state->depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT, vk_core);
+    transition_image_layout(state->depth_image, depth_format, state, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, vk_core);
 }
 

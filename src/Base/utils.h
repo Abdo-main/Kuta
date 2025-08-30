@@ -19,8 +19,11 @@ void log_info();
 
 const uint32_t* read_file(const char* filename, size_t* size);
 
-VkImageView create_image_view(State *state, VkImage image, VkFormat format, VkImageAspectFlags aspect_Flags);
+VkImageView create_image_view(State *state, VkImage image, VkFormat format, VkImageAspectFlags aspect_Flags, VkCore *vk_core);
+
 uint32_t clamp(uint32_t value, uint32_t min, uint32_t max);
 
-VkCommandBuffer begin_single_time_commands(State *state);
-void end_single_time_commands(State *state, VkCommandBuffer command_buffer);
+VkCommandBuffer begin_single_time_commands(State *state, VkCore *vk_core);
+
+void end_single_time_commands(State *state, VkCommandBuffer command_buffer, VkCore *vk_core);
+

@@ -1,6 +1,5 @@
 #include <stdbool.h>
 #include <GLFW/glfw3.h>
-#include <stdio.h>
 
 #include "window.h"
 #include "main.h"

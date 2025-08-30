@@ -14,6 +14,17 @@ typedef struct {
     vec2 tex_coord;
 }Vertex;
 
+typedef struct {
+    VkInstance instance;
+    VkPhysicalDevice physical_device;
+    VkDevice device;
+    VkSurfaceKHR surface;
+    VkQueue graphics_queue;
+    uint32_t graphics_queue_family;
+    uint32_t api_version;
+    VkAllocationCallbacks* allocator;
+} VkCore;
+
 
 typedef struct {
     VkPipeline graphics_pipeline;
@@ -60,18 +71,10 @@ typedef struct State {
     VkImageView depth_image_view;
 
     //Vulkan
-    uint32_t queue_family;
-    uint32_t api_version;
     uint32_t swap_chain_image_count;
     uint32_t current_frame;
 
 
-    VkAllocationCallbacks *allocator;
-    VkInstance instance;
-    VkPhysicalDevice physical_device;
-    VkSurfaceKHR surface;
-    VkDevice device;
-    VkQueue queue;
 
     Vertex* vertices;
     uint32_t* indices;

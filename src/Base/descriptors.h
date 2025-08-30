@@ -9,12 +9,16 @@ typedef struct {
     alignas(16)mat4 proj;
 } UBO;
 
-void create_descriptor_set_layout(State *state);
-
-void destroy_descriptor_set_layout(State *state);
-
-void destroy_descriptor_sets(State *state);
+void create_descriptor_set_layout(State *state, VkCore *vk_core);
 
 
-void create_descriptor_pool(State *state);
-void create_descriptor_sets(State *state);
+void destroy_descriptor_set_layout(State *state, VkCore *vk_core);
+
+
+void destroy_descriptor_sets(State *state, VkCore *vk_core);
+
+
+
+void create_descriptor_pool(State *state, VkCore *vk_core);
+void create_descriptor_sets(State *state, VkCore *vk_core);
+

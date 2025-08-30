@@ -15,77 +15,64 @@
 
 
 
-void init(State *state) {
+void init(State *state, VkCore *vk_core) {
     setup_error_handling();
     log_info();
 
     create_window(state);
-    create_instance(state);
 
-    select_physical_device(state);
-    create_surface(state);
-    select_queue_family(state);
-    create_device(state);
-    get_queue(state);
-    create_swapchain(state);
-    state->vertex_count = 4;
-    state->vertices = malloc(state->vertex_count * sizeof(Vertex));
-    state->vertices[0] = (Vertex){{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}};
-    // ... add more vertices
+    init_vk(vk_core, state);
 
-    state->index_count = 6;
-    state->indices = malloc(state->index_count * sizeof(uint32_t));
-    state->indices[0] = 0; state->indices[1] = 1; state->indices[2] = 2;
-    // ... add more indices
-    create_renderer(state);
+    create_swapchain(state, vk_core);
+    create_renderer(state, vk_core);
 }
 
-void loop(State *state) {
+void loop(State *state, VkCore *vk_core) {
     while (!glfwWindowShouldClose(state->window)) {
         glfwPollEvents();
         
         uint32_t frame = state->current_frame;
         Renderer* renderer = &state->renderer;
 
-        vkWaitForFences(state->device, 1, &renderer->in_flight_fence[frame], VK_TRUE, UINT64_MAX);
-        vkResetFences(state->device, 1, &renderer->in_flight_fence[frame]);
+        vkWaitForFences(vk_core->device, 1, &renderer->in_flight_fence[frame], VK_TRUE, UINT64_MAX);
+        vkResetFences(vk_core->device, 1, &renderer->in_flight_fence[frame]);
 
-        acquire_next_swapchain_image(state);
+        acquire_next_swapchain_image(state, vk_core);
         record_command_buffer(state);
-        submit_command_buffer(state);
-        present_swapchain_image(state);
+        submit_command_buffer(state, vk_core);
+        present_swapchain_image(state, vk_core);
 
         state->current_frame = (state->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;    
     }
 }
 
-void cleanup(State *state) {
-    destroy_renderer(state);
-    cleanup_swapchain(state);  
+void cleanup(State *state, VkCore *vk_core) {
+    destroy_renderer(state, vk_core);
+    cleanup_swapchain(state, vk_core);  
 
-    vkDestroySampler(state->device, state->texture_sampler, state->allocator);
-    vkDestroyImageView(state->device, state->texture_image_view, state->allocator);
-    vkDestroyImage(state->device, state->texture_image, state->allocator);
-    vkFreeMemory(state->device, state->texture_image_memmory, state->allocator);
+    vkDestroySampler(vk_core->device, state->texture_sampler, vk_core->allocator);
+    vkDestroyImageView(vk_core->device, state->texture_image_view, vk_core->allocator);
+    vkDestroyImage(vk_core->device, state->texture_image, vk_core->allocator);
+    vkFreeMemory(vk_core->device, state->texture_image_memmory, vk_core->allocator);
     
-    destroy_uniform_buffers(state);
-    destroy_descriptor_sets(state);
-    destroy_descriptor_set_layout(state);
+    destroy_uniform_buffers(state, vk_core);
+    destroy_descriptor_sets(state, vk_core);
+    destroy_descriptor_set_layout(state, vk_core);
 
-    destroy_index_buffer(state);
-    destroy_vertex_buffer(state);
+    destroy_index_buffer(state, vk_core);
+    destroy_vertex_buffer(state, vk_core);
 
-    if (state->device != VK_NULL_HANDLE)
-        vkDestroyDevice(state->device, state->allocator);
+    if (vk_core->device != VK_NULL_HANDLE)
+        vkDestroyDevice(vk_core->device, vk_core->allocator);
 
-    if (state->surface != VK_NULL_HANDLE)
-        vkDestroySurfaceKHR(state->instance, state->surface, state->allocator);
+    if (vk_core->surface != VK_NULL_HANDLE)
+        vkDestroySurfaceKHR(vk_core->instance, vk_core->surface, vk_core->allocator);
 
     if (state->window)
         glfwDestroyWindow(state->window);
 
-    if (state->instance != VK_NULL_HANDLE)
-        vkDestroyInstance(state->instance, state->allocator);
+    if (vk_core->instance != VK_NULL_HANDLE)
+        vkDestroyInstance(vk_core->instance, vk_core->allocator);
 }
 
 int main(void) {
@@ -96,13 +83,16 @@ int main(void) {
         .window_width = 800,
         .window_height = 600,
         .window_fullscreen = false,
-        .api_version = VK_API_VERSION_1_4,
         .background_color = (VkClearColorValue){{0.3f, 0.1f, 0.0f, 1.0f}}
     };
 
-    init(&state);
-    loop(&state);
-    cleanup(&state);
+    VkCore vk_core = {
+        .api_version = VK_API_VERSION_1_4,
+    };
+
+    init(&state, &vk_core);
+    loop(&state, &vk_core);
+    cleanup(&state, &vk_core);
 
     return EXIT_SUCCESS;
 }

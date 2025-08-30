@@ -13,7 +13,7 @@
 #include "utils.h"
 #include "descriptors.h"
 
-void create_graphics_pipeline(State *state){
+void create_graphics_pipeline(State *state, VkCore *vk_core){
     size_t vert_size;
     const uint32_t *vert_shader_src = read_file("./shaders/vert.spv", &vert_size);
     EXPECT(!vert_shader_src, "emtpy sprv file");
@@ -24,17 +24,17 @@ void create_graphics_pipeline(State *state){
 
     VkShaderModule vertex_shader_module, fragment_shader_module;
     
-    EXPECT(vkCreateShaderModule(state->device, &(VkShaderModuleCreateInfo) {
+    EXPECT(vkCreateShaderModule(vk_core->device, &(VkShaderModuleCreateInfo) {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
         .pCode = vert_shader_src,
         .codeSize = vert_size,
-    }, state->allocator, &vertex_shader_module), "Failed to create shader modules")
+    }, vk_core->allocator, &vertex_shader_module), "Failed to create shader modules")
 
-    EXPECT(vkCreateShaderModule(state->device, &(VkShaderModuleCreateInfo) {
+    EXPECT(vkCreateShaderModule(vk_core->device, &(VkShaderModuleCreateInfo) {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
         .pCode = frag_shader_src,
         .codeSize = frag_size,
-    }, state->allocator, &fragment_shader_module), "Failed to create shader modules")
+    }, vk_core->allocator, &fragment_shader_module), "Failed to create shader modules")
 
 
     VkPipelineShaderStageCreateInfo shader_stages[] = {
@@ -84,16 +84,16 @@ void create_graphics_pipeline(State *state){
         }
     };
 
-    EXPECT(vkCreatePipelineLayout(state->device, &(VkPipelineLayoutCreateInfo) {
+    EXPECT(vkCreatePipelineLayout(vk_core->device, &(VkPipelineLayoutCreateInfo) {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .setLayoutCount = 1,
         .pSetLayouts = &state->renderer.descriptor_set_layout,
-    }, state->allocator, &state->renderer.pipeline_layout), "Faailed to create pipeline layout")
+    }, vk_core->allocator, &state->renderer.pipeline_layout), "Faailed to create pipeline layout")
 
     VkVertexInputBindingDescription binding_description = get_binding_description();
     AttributeDescriptions attribute_descriptions = get_attribute_descriptions();
 
-    EXPECT(vkCreateGraphicsPipelines(state->device, NULL, 1, &(VkGraphicsPipelineCreateInfo){
+    EXPECT(vkCreateGraphicsPipelines(vk_core->device, NULL, 1, &(VkGraphicsPipelineCreateInfo){
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pStages = shader_stages,
         .stageCount = sizeof(shader_stages)/sizeof(*shader_stages),
@@ -146,21 +146,21 @@ void create_graphics_pipeline(State *state){
         },
         .layout = state->renderer.pipeline_layout,
         .renderPass = state->renderer.render_pass,
-    }, state->allocator, &state->renderer.graphics_pipeline), "Failed to Create Graphics Pipeline")
+    }, vk_core->allocator, &state->renderer.graphics_pipeline), "Failed to Create Graphics Pipeline")
 
-    vkDestroyShaderModule(state->device, vertex_shader_module, state->allocator);
-    vkDestroyShaderModule(state->device, fragment_shader_module, state->allocator);
+    vkDestroyShaderModule(vk_core->device, vertex_shader_module, vk_core->allocator);
+    vkDestroyShaderModule(vk_core->device, fragment_shader_module, vk_core->allocator);
 
     free((void*)vert_shader_src);
     free((void*)frag_shader_src);
 }
 
-void destroy_graphics_pipeline(State *state){
-    vkDestroyPipeline(state->device, state->renderer.graphics_pipeline, state->allocator);
-    vkDestroyPipelineLayout(state->device, state->renderer.pipeline_layout, state->allocator);
+void destroy_graphics_pipeline(State *state, VkCore *vk_core){
+    vkDestroyPipeline(vk_core->device, state->renderer.graphics_pipeline, vk_core->allocator);
+    vkDestroyPipelineLayout(vk_core->device, state->renderer.pipeline_layout, vk_core->allocator);
 }
 
-void create_render_pass(State *state){
+void create_render_pass(State *state, VkCore *vk_core){
 
     
     VkFormat image_format = state->image_format;
@@ -173,7 +173,7 @@ void create_render_pass(State *state){
     };
 
     VkAttachmentDescription depth_attachment = {
-        .format = find_depth_format(state),
+        .format = find_depth_format(state, vk_core),
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -203,7 +203,7 @@ void create_render_pass(State *state){
         },
         /* depth */
         {
-            .format = find_depth_format(state),
+            .format = find_depth_format(state, vk_core),
             .samples = VK_SAMPLE_COUNT_1_BIT,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -232,7 +232,7 @@ void create_render_pass(State *state){
         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
     };
 
-    EXPECT(vkCreateRenderPass(state->device, &(VkRenderPassCreateInfo) {
+    EXPECT(vkCreateRenderPass(vk_core->device, &(VkRenderPassCreateInfo) {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .subpassCount = 1,
         .pSubpasses = subpass_descriptions,
@@ -240,14 +240,14 @@ void create_render_pass(State *state){
         .pAttachments = attachment_descriptions,
         .dependencyCount = 1,
         .pDependencies = &dependency,
-    }, state->allocator, &state->renderer.render_pass), "Failed to create a render pass")
+    }, vk_core->allocator, &state->renderer.render_pass), "Failed to create a render pass")
 }
 
-void destroy_render_pass(State *state){
-    vkDestroyRenderPass(state->device, state->renderer.render_pass, state->allocator);
+void destroy_render_pass(State *state, VkCore *vk_core){
+    vkDestroyRenderPass(vk_core->device, state->renderer.render_pass, vk_core->allocator);
 }
 
-void create_frame_buffers(State *state) {
+void create_frame_buffers(State *state, VkCore *vk_core) {
     uint32_t frame_buffer_count = state->swap_chain_image_count;
     state->renderer.frame_buffers = malloc(frame_buffer_count * sizeof(VkFramebuffer));
     EXPECT(state->renderer.frame_buffers == NULL, "Couldn't allocate memory for framebuffers array")
@@ -260,7 +260,7 @@ void create_frame_buffers(State *state) {
             state->swap_chain_image_views[framebufferIndex],
             state->depth_image_view,
         };
-        EXPECT(vkCreateFramebuffer(state->device, &(VkFramebufferCreateInfo) {
+        EXPECT(vkCreateFramebuffer(vk_core->device, &(VkFramebufferCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .layers = 1,
             .renderPass = state->renderer.render_pass,
@@ -268,40 +268,40 @@ void create_frame_buffers(State *state) {
             .height = frame_buffers_extent.height,
             .attachmentCount = sizeof(attachments)/sizeof(attachments[0]),
             .pAttachments = attachments,
-        }, state->allocator, &state->renderer.frame_buffers[framebufferIndex]), "Couldn't create framebuffer %i", framebufferIndex)
+        }, vk_core->allocator, &state->renderer.frame_buffers[framebufferIndex]), "Couldn't create framebuffer %i", framebufferIndex)
     }
 }
 
-void destroy_frame_buffers(State *state) {
+void destroy_frame_buffers(State *state, VkCore *vk_core) {
     uint32_t framebuffer_count = state->swap_chain_image_count;
 
     for (int framebuffer_index = 0; framebuffer_index < framebuffer_count; ++framebuffer_index) {
-        vkDestroyFramebuffer(state->device, state->renderer.frame_buffers[framebuffer_index], state->allocator);
+        vkDestroyFramebuffer(vk_core->device, state->renderer.frame_buffers[framebuffer_index], vk_core->allocator);
     }
 
     free(state->renderer.frame_buffers);
 }
 
-void create_command_pool(State *state) {
-    EXPECT(vkCreateCommandPool(state->device, &(VkCommandPoolCreateInfo) {
+void create_command_pool(State *state, VkCore *vk_core) {
+    EXPECT(vkCreateCommandPool(vk_core->device, &(VkCommandPoolCreateInfo) {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .queueFamilyIndex = state->queue_family,
+        .queueFamilyIndex = vk_core->graphics_queue_family,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-    }, state->allocator, &state->renderer.command_pool), "Failed to create command pool")
+    }, vk_core->allocator, &state->renderer.command_pool), "Failed to create command pool")
 }
 
-void destroy_coommand_pool(State *state) {
-    vkDestroyCommandPool(state->device, state->renderer.command_pool, state->allocator);
+void destroy_coommand_pool(State *state, VkCore *vk_core) {
+    vkDestroyCommandPool(vk_core->device, state->renderer.command_pool, vk_core->allocator);
 }
 
 
 
-void allocate_command_buffer(State *state) {
+void allocate_command_buffer(State *state, VkCore *vk_core) {
     uint32_t count = state->swap_chain_image_count;
     state->renderer.command_buffers = malloc(count * sizeof(VkCommandBuffer));
     EXPECT(!state->renderer.command_buffers, "Failed to allocate command buffers array");
 
-    EXPECT(vkAllocateCommandBuffers(state->device, &(VkCommandBufferAllocateInfo) {
+    EXPECT(vkAllocateCommandBuffers(vk_core->device, &(VkCommandBufferAllocateInfo) {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool = state->renderer.command_pool,
         .commandBufferCount = count,
@@ -309,7 +309,7 @@ void allocate_command_buffer(State *state) {
     }, state->renderer.command_buffers), "Failed to allocate command buffers");
 }
 
-void create_sync_objects(State *state) {
+void create_sync_objects(State *state, VkCore *vk_core) {
     Renderer* renderer = &state->renderer;
     uint32_t image_count = state->swap_chain_image_count; // or renderer->image_count
 
@@ -319,34 +319,34 @@ void create_sync_objects(State *state) {
 
     for (uint32_t i = 0; i < image_count; ++i) {
         EXPECT(
-            vkCreateSemaphore(state->device, &(VkSemaphoreCreateInfo){ .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO }, 
-                              state->allocator, &renderer->acquired_image_semaphore[i]),
+            vkCreateSemaphore(vk_core->device, &(VkSemaphoreCreateInfo){ .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO }, 
+                              vk_core->allocator, &renderer->acquired_image_semaphore[i]),
             "Couldn't create acquired image semaphore %u", i
         );
         EXPECT(
-            vkCreateSemaphore(state->device, &(VkSemaphoreCreateInfo){ .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO }, 
-                              state->allocator, &renderer->finished_render_semaphore[i]),
+            vkCreateSemaphore(vk_core->device, &(VkSemaphoreCreateInfo){ .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO }, 
+                              vk_core->allocator, &renderer->finished_render_semaphore[i]),
             "Couldn't create finished render semaphore %u", i
         );
         EXPECT(
-            vkCreateFence(state->device, &(VkFenceCreateInfo){ 
+            vkCreateFence(vk_core->device, &(VkFenceCreateInfo){ 
                 .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, 
                 .flags = VK_FENCE_CREATE_SIGNALED_BIT 
             }, 
-            state->allocator, &renderer->in_flight_fence[i]),
+            vk_core->allocator, &renderer->in_flight_fence[i]),
             "Couldn't create in-flight fence %u", i
         );
     }
 }
 
 
-void destroy_sync_objects(State *state) {
+void destroy_sync_objects(State *state, VkCore *vk_core) {
     Renderer* renderer = &state->renderer;
 
     for (uint32_t i = 0; i < state->swap_chain_image_count; ++i) {
-        vkDestroyFence(state->device, renderer->in_flight_fence[i], state->allocator);
-        vkDestroySemaphore(state->device, renderer->acquired_image_semaphore[i], state->allocator);
-        vkDestroySemaphore(state->device, renderer->finished_render_semaphore[i], state->allocator);
+        vkDestroyFence(vk_core->device, renderer->in_flight_fence[i], vk_core->allocator);
+        vkDestroySemaphore(vk_core->device, renderer->acquired_image_semaphore[i], vk_core->allocator);
+        vkDestroySemaphore(vk_core->device, renderer->finished_render_semaphore[i], vk_core->allocator);
     }
     free(renderer->in_flight_fence);
     free(renderer->acquired_image_semaphore);
@@ -414,14 +414,14 @@ void record_command_buffer(State *state) {
     EXPECT(vkEndCommandBuffer(command_buffer), "Couldn't end command buffer");
 }
 
-void submit_command_buffer(State *state) {
+void submit_command_buffer(State *state, VkCore *vk_core) {
     uint32_t frame = state->current_frame;
     uint32_t image_index = state->acquired_image_index;
     VkCommandBuffer command_buffer = state->renderer.command_buffers[frame];
 
     update_uniform_buffer(state, state->current_frame);
     
-    EXPECT(vkQueueSubmit(state->queue, 1, &(VkSubmitInfo) {
+    EXPECT(vkQueueSubmit(vk_core->graphics_queue, 1, &(VkSubmitInfo) {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .commandBufferCount = 1,
         .pCommandBuffers = &command_buffer,
@@ -435,38 +435,38 @@ void submit_command_buffer(State *state) {
     }, state->renderer.in_flight_fence[frame]), "Couldn't submit command buffer");
 }
 
-void create_renderer(State *state){
-    create_render_pass(state);
-    create_descriptor_set_layout(state);
-    create_graphics_pipeline(state);
-    create_command_pool(state);
-    create_depth_resources(state);
-    create_frame_buffers(state);
-    create_texture_image(state, "./textures/pasted__twitch.png");
-    create_texture_image_view(state);
-    create_texture_sampler(state);
+void create_renderer(State *state, VkCore *vk_core){
+    create_render_pass(state, vk_core);
+    create_descriptor_set_layout(state, vk_core);
+    create_graphics_pipeline(state, vk_core);
+    create_command_pool(state, vk_core);
+    create_depth_resources(state, vk_core);
+    create_frame_buffers(state, vk_core);
+    create_texture_image(state, "./textures/pasted__twitch.png", vk_core);
+    create_texture_image_view(state, vk_core);
+    create_texture_sampler(state, vk_core);
     load_model(state, "./models/twitch.glb");
-    create_vertex_buffer(state);
-    create_index_buffer(state);
-    create_descriptor_pool(state);
-    create_uniform_buffers(state);
-    create_descriptor_sets(state);
-    allocate_command_buffer(state);
-    create_sync_objects(state);
+    create_vertex_buffer(state, vk_core);
+    create_index_buffer(state, vk_core);
+    create_descriptor_pool(state, vk_core);
+    create_uniform_buffers(state, vk_core);
+    create_descriptor_sets(state, vk_core);
+    allocate_command_buffer(state, vk_core);
+    create_sync_objects(state, vk_core);
 }
 
-void destroy_renderer(State *state, Renderer *renderer){
-    vkQueueWaitIdle(state->queue);
+void destroy_renderer(State *state, VkCore *vk_core){
+    vkQueueWaitIdle(vk_core->graphics_queue);
 
     if (state->renderer.command_buffers) {
-        vkFreeCommandBuffers(state->device, state->renderer.command_pool, 
+        vkFreeCommandBuffers(vk_core->device, state->renderer.command_pool, 
                            state->swap_chain_image_count, state->renderer.command_buffers);
         free(state->renderer.command_buffers);
     }
 
-    destroy_sync_objects(state);
-    destroy_coommand_pool(state);
-    destroy_frame_buffers(state);
-    destroy_graphics_pipeline(state);
-    destroy_render_pass(state);
+    destroy_sync_objects(state, vk_core);
+    destroy_coommand_pool(state, vk_core);
+    destroy_frame_buffers(state, vk_core);
+    destroy_graphics_pipeline(state, vk_core);
+    destroy_render_pass(state, vk_core);
 }

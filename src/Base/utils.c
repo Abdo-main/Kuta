@@ -17,7 +17,7 @@ uint32_t clamp(uint32_t value, uint32_t min, uint32_t max) {
     return value;
 }
 
-VkCommandBuffer begin_single_time_commands(State *state) {
+VkCommandBuffer begin_single_time_commands(State *state, VkCore *vk_core) {
     VkCommandBufferAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -26,7 +26,7 @@ VkCommandBuffer begin_single_time_commands(State *state) {
     };
 
     VkCommandBuffer command_buffer;
-    vkAllocateCommandBuffers(state->device, &alloc_info, &command_buffer);
+    vkAllocateCommandBuffers(vk_core->device, &alloc_info, &command_buffer);
 
     VkCommandBufferBeginInfo begin_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -37,7 +37,7 @@ VkCommandBuffer begin_single_time_commands(State *state) {
     return command_buffer;
 }
 
-void end_single_time_commands(State *state, VkCommandBuffer command_buffer) {
+void end_single_time_commands(State *state, VkCommandBuffer command_buffer, VkCore *vk_core) {
     vkEndCommandBuffer(command_buffer);
 
     VkSubmitInfo submit_info = {
@@ -46,13 +46,13 @@ void end_single_time_commands(State *state, VkCommandBuffer command_buffer) {
         .pCommandBuffers = &command_buffer,
     };
 
-    vkQueueSubmit(state->queue, 1, &submit_info, VK_NULL_HANDLE);
-    vkQueueWaitIdle(state->queue);
+    vkQueueSubmit(vk_core->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(vk_core->graphics_queue);
 
-    vkFreeCommandBuffers(state->device, state->renderer.command_pool, 1, &command_buffer);
+    vkFreeCommandBuffers(vk_core->device, state->renderer.command_pool, 1, &command_buffer);
 }
 
-VkImageView create_image_view(State *state, VkImage image, VkFormat format, VkImageAspectFlags aspect_Flags) {
+VkImageView create_image_view(State *state, VkImage image, VkFormat format, VkImageAspectFlags aspect_Flags, VkCore *vk_core) {
     VkImageViewCreateInfo view_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
@@ -66,7 +66,7 @@ VkImageView create_image_view(State *state, VkImage image, VkFormat format, VkIm
     };
 
     VkImageView image_view;
-    EXPECT(vkCreateImageView(state->device, &view_info, state->allocator, &image_view), "Failed to create texture image view")
+    EXPECT(vkCreateImageView(vk_core->device, &view_info, vk_core->allocator, &image_view), "Failed to create texture image view")
 
     return image_view;
 }

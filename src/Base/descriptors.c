@@ -10,7 +10,7 @@
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
-void create_descriptor_set_layout(State *state) {
+void create_descriptor_set_layout(State *state, VkCore *vk_core) {
     VkDescriptorSetLayoutBinding sampler_layout_binding = {
         .binding = 1,
         .descriptorCount = 1,
@@ -33,15 +33,15 @@ void create_descriptor_set_layout(State *state) {
         .pBindings = bindings,
     };
 
-    EXPECT(vkCreateDescriptorSetLayout(state->device, &layout_info, state->allocator, &state->renderer.descriptor_set_layout), "Failed to create descriptor set layout!")
+    EXPECT(vkCreateDescriptorSetLayout(vk_core->device, &layout_info, vk_core->allocator, &state->renderer.descriptor_set_layout), "Failed to create descriptor set layout!")
 
 }
 
-void destroy_descriptor_set_layout(State *state){
-    vkDestroyDescriptorSetLayout(state->device, state->renderer.descriptor_set_layout, state->allocator);
+void destroy_descriptor_set_layout(State *state, VkCore *vk_core){
+    vkDestroyDescriptorSetLayout(vk_core->device, state->renderer.descriptor_set_layout, vk_core->allocator);
 }
 
-void create_descriptor_pool(State *state) {
+void create_descriptor_pool(State *state, VkCore *vk_core) {
     VkDescriptorPoolSize pool_sizes[2] = {0};
 
     pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -57,10 +57,10 @@ void create_descriptor_pool(State *state) {
         .maxSets = (uint32_t)MAX_FRAMES_IN_FLIGHT,
     };
 
-    EXPECT(vkCreateDescriptorPool(state->device, &pool_info, state->allocator, &state->renderer.descriptor_pool), "Failed to create descriptor pool!")
+    EXPECT(vkCreateDescriptorPool(vk_core->device, &pool_info, vk_core->allocator, &state->renderer.descriptor_pool), "Failed to create descriptor pool!")
 }
 
-void create_descriptor_sets(State *state) {
+void create_descriptor_sets(State *state, VkCore *vk_core) {
     VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {};
     for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         layouts[i] = state->renderer.descriptor_set_layout;
@@ -75,7 +75,7 @@ void create_descriptor_sets(State *state) {
     state->renderer.descriptor_sets = malloc(MAX_FRAMES_IN_FLIGHT * sizeof(VkDescriptorSet));
     state->renderer.descriptor_set_count = MAX_FRAMES_IN_FLIGHT;
 
-    EXPECT(vkAllocateDescriptorSets(state->device, &alloc_info, state->renderer.descriptor_sets), "Failed to allocate for descriptor sets")
+    EXPECT(vkAllocateDescriptorSets(vk_core->device, &alloc_info, state->renderer.descriptor_sets), "Failed to allocate for descriptor sets")
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorBufferInfo buffer_info = {
@@ -104,11 +104,11 @@ void create_descriptor_sets(State *state) {
         descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptor_writes[1].descriptorCount = 1;
         descriptor_writes[1].pImageInfo = &image_info;
-        vkUpdateDescriptorSets(state->device, sizeof(descriptor_writes)/sizeof(descriptor_writes[0]), descriptor_writes, 0, NULL);
+        vkUpdateDescriptorSets(vk_core->device, sizeof(descriptor_writes)/sizeof(descriptor_writes[0]), descriptor_writes, 0, NULL);
     }
     
 }
 
-void destroy_descriptor_sets(State *state) {
-    vkDestroyDescriptorPool(state->device, state->renderer.descriptor_pool, state->allocator);
+void destroy_descriptor_sets(State *state, VkCore *vk_core) {
+    vkDestroyDescriptorPool(vk_core->device, state->renderer.descriptor_pool, vk_core->allocator);
 }
