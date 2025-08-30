@@ -15,7 +15,7 @@
 
 
 
-void init(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+void init(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data) {
     setup_error_handling();
     log_info();
 
@@ -25,10 +25,10 @@ void init(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
 
     create_swapchain(state, vk_core, swp_ch);
 
-    create_renderer(state, vk_core, swp_ch);
+    create_renderer(state, vk_core, swp_ch, buffer_data);
 }
 
-void loop(State *state, VkCore *vk_core,SwapchainData *swp_ch) {
+void loop(State *state, VkCore *vk_core,SwapchainData *swp_ch, BufferData *buffer_data) {
     while (!glfwWindowShouldClose(state->window)) {
         glfwPollEvents();
         
@@ -39,15 +39,15 @@ void loop(State *state, VkCore *vk_core,SwapchainData *swp_ch) {
         vkResetFences(vk_core->device, 1, &renderer->in_flight_fence[frame]);
 
         acquire_next_swapchain_image(state, vk_core, swp_ch);
-        record_command_buffer(state, swp_ch);
-        submit_command_buffer(state, vk_core, swp_ch);
+        record_command_buffer(state, swp_ch, buffer_data);
+        submit_command_buffer(state, vk_core, swp_ch, buffer_data);
         present_swapchain_image(state, vk_core, swp_ch);
 
         state->current_frame = (state->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;    
     }
 }
 
-void cleanup(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+void cleanup(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data) {
     destroy_renderer(state, vk_core, swp_ch);
     cleanup_swapchain(state, vk_core, swp_ch);  
 
@@ -56,12 +56,12 @@ void cleanup(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
     vkDestroyImage(vk_core->device, state->texture_image, vk_core->allocator);
     vkFreeMemory(vk_core->device, state->texture_image_memmory, vk_core->allocator);
     
-    destroy_uniform_buffers(state, vk_core);
+    destroy_uniform_buffers(state, vk_core, buffer_data);
     destroy_descriptor_sets(state, vk_core);
     destroy_descriptor_set_layout(state, vk_core);
 
-    destroy_index_buffer(state, vk_core);
-    destroy_vertex_buffer(state, vk_core);
+    destroy_index_buffer(state, vk_core, buffer_data);
+    destroy_vertex_buffer(state, vk_core, buffer_data);
 
     if (vk_core->device != VK_NULL_HANDLE)
         vkDestroyDevice(vk_core->device, vk_core->allocator);
@@ -93,9 +93,11 @@ int main(void) {
 
     SwapchainData swp_ch = {};
 
-    init(&state, &vk_core, &swp_ch);
-    loop(&state, &vk_core, &swp_ch);
-    cleanup(&state, &vk_core, &swp_ch);
+    BufferData buffer_data = {};
+
+    init(&state, &vk_core, &swp_ch, &buffer_data);
+    loop(&state, &vk_core, &swp_ch, &buffer_data);
+    cleanup(&state, &vk_core, &swp_ch, &buffer_data);
 
     return EXIT_SUCCESS;
 }

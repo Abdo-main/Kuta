@@ -35,6 +35,23 @@ typedef struct {
     uint32_t acquired_image_index;
 } SwapchainData;
 
+typedef struct {
+    // Geometry buffers
+    VkBuffer vertex_buffer;
+    VkDeviceMemory vertex_buffer_memory;
+    VkBuffer index_buffer;
+    VkDeviceMemory index_buffer_memory;
+    
+    // Per-frame uniform buffers
+    VkBuffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
+    VkDeviceMemory uniform_buffers_memory[MAX_FRAMES_IN_FLIGHT];
+    void* uniform_buffers_mapped[MAX_FRAMES_IN_FLIGHT];
+    
+    // Staging for uploads
+    VkBuffer staging_buffer;
+    VkDeviceMemory staging_buffer_memory;
+} BufferData;
+
 
 typedef struct {
     VkPipeline graphics_pipeline;
@@ -88,16 +105,7 @@ typedef struct State {
     size_t vertex_count;
     size_t index_count;
 
-    VkBuffer vertex_buffer;
-    VkDeviceMemory vertex_buffer_memmory;
-    VkBuffer staging_buffer;
-    VkDeviceMemory staging_buffer_memmory;
-    VkBuffer index_buffer;
-    VkDeviceMemory index_buffer_memmory;
 
-    VkBuffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
-    VkDeviceMemory uniform_buffers_memmory[MAX_FRAMES_IN_FLIGHT];
-    void* uniform_buffers_mapped[MAX_FRAMES_IN_FLIGHT];
 
     VkClearColorValue background_color;
 

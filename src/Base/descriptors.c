@@ -60,7 +60,7 @@ void create_descriptor_pool(State *state, VkCore *vk_core) {
     EXPECT(vkCreateDescriptorPool(vk_core->device, &pool_info, vk_core->allocator, &state->renderer.descriptor_pool), "Failed to create descriptor pool!")
 }
 
-void create_descriptor_sets(State *state, VkCore *vk_core) {
+void create_descriptor_sets(State *state, VkCore *vk_core, BufferData *buffer_data) {
     VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {};
     for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         layouts[i] = state->renderer.descriptor_set_layout;
@@ -79,7 +79,7 @@ void create_descriptor_sets(State *state, VkCore *vk_core) {
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorBufferInfo buffer_info = {
-            .buffer = state->uniform_buffers[i],
+            .buffer = buffer_data->uniform_buffers[i],
             .offset = 0,
             .range = sizeof(UBO),
         };

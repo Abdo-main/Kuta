@@ -113,64 +113,64 @@ void copy_buffer(State *state, VkDeviceSize size, VkBuffer src_buffer, VkBuffer 
     end_single_time_commands(state, command_buffer, vk_core);
 }
 
-void create_vertex_buffer(State *state, VkCore *vk_core) {
+void create_vertex_buffer(State *state, VkCore *vk_core, BufferData *buffer_data) {
     size_t vertex_count = state->vertex_count;
     VkDeviceSize buffer_size = sizeof(state->vertices[0]) * vertex_count;
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-    &state->staging_buffer, &state->staging_buffer_memmory, vk_core);
+    &buffer_data->staging_buffer, &buffer_data->staging_buffer_memory, vk_core);
         
     void* data;
-    vkMapMemory(vk_core->device, state->staging_buffer_memmory, 0, buffer_size, 0, &data);
+    vkMapMemory(vk_core->device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
        memcpy(data, state->vertices, (size_t)buffer_size);
-    vkUnmapMemory(vk_core->device, state->staging_buffer_memmory);
+    vkUnmapMemory(vk_core->device, buffer_data->staging_buffer_memory);
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-    &state->vertex_buffer, &state->vertex_buffer_memmory, vk_core);
+    &buffer_data->vertex_buffer, &buffer_data->vertex_buffer_memory, vk_core);
 
-    copy_buffer(state, buffer_size, state->staging_buffer, state->vertex_buffer, vk_core);
+    copy_buffer(state, buffer_size, buffer_data->staging_buffer, buffer_data->vertex_buffer, vk_core);
 
-    vkDestroyBuffer(vk_core->device, state->staging_buffer, vk_core->allocator);
-    vkFreeMemory(vk_core->device, state->staging_buffer_memmory, vk_core->allocator);
+    vkDestroyBuffer(vk_core->device, buffer_data->staging_buffer, vk_core->allocator);
+    vkFreeMemory(vk_core->device, buffer_data->staging_buffer_memory, vk_core->allocator);
 }
 
-void destroy_vertex_buffer(State *state, VkCore *vk_core){
-    vkDestroyBuffer(vk_core->device, state->vertex_buffer, vk_core->allocator);
-    vkFreeMemory(vk_core->device, state->vertex_buffer_memmory, vk_core->allocator);
+void destroy_vertex_buffer(State *state, VkCore *vk_core, BufferData *buffer_data){
+    vkDestroyBuffer(vk_core->device, buffer_data->vertex_buffer, vk_core->allocator);
+    vkFreeMemory(vk_core->device, buffer_data->vertex_buffer_memory, vk_core->allocator);
 }
 
-void create_index_buffer(State *state, VkCore *vk_core) {
+void create_index_buffer(State *state, VkCore *vk_core, BufferData *buffer_data) {
     size_t indices_count = state->index_count;
     VkDeviceSize buffer_size = sizeof(state->indices[0]) * indices_count;
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-    &state->staging_buffer, &state->staging_buffer_memmory, vk_core);
+    &buffer_data->staging_buffer, &buffer_data->staging_buffer_memory, vk_core);
         
     void* data;
-    vkMapMemory(vk_core->device, state->staging_buffer_memmory, 0, buffer_size, 0, &data);
+    vkMapMemory(vk_core->device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
        memcpy(data, state->indices, (size_t)buffer_size);
-    vkUnmapMemory(vk_core->device, state->staging_buffer_memmory);
+    vkUnmapMemory(vk_core->device, buffer_data->staging_buffer_memory);
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-    &state->index_buffer, &state->index_buffer_memmory, vk_core);
+    &buffer_data->index_buffer, &buffer_data->index_buffer_memory, vk_core);
 
-    copy_buffer(state, buffer_size, state->staging_buffer, state->index_buffer, vk_core);
+    copy_buffer(state, buffer_size, buffer_data->staging_buffer, buffer_data->index_buffer, vk_core);
 
-    vkDestroyBuffer(vk_core->device, state->staging_buffer, vk_core->allocator);
-    vkFreeMemory(vk_core->device, state->staging_buffer_memmory, vk_core->allocator);
+    vkDestroyBuffer(vk_core->device, buffer_data->staging_buffer, vk_core->allocator);
+    vkFreeMemory(vk_core->device, buffer_data->staging_buffer_memory, vk_core->allocator);
 }
 
-void destroy_index_buffer(State *state, VkCore *vk_core){
-    vkDestroyBuffer(vk_core->device, state->index_buffer, vk_core->allocator);
-    vkFreeMemory(vk_core->device, state->index_buffer_memmory, vk_core->allocator);
+void destroy_index_buffer(State *state, VkCore *vk_core, BufferData *buffer_data){
+    vkDestroyBuffer(vk_core->device, buffer_data->index_buffer, vk_core->allocator);
+    vkFreeMemory(vk_core->device, buffer_data->index_buffer_memory, vk_core->allocator);
 }
 
-void create_uniform_buffers(State *state, VkCore *vk_core) {
+void create_uniform_buffers(State *state, VkCore *vk_core, BufferData *buffer_data) {
     VkDeviceSize buffer_size = sizeof(UBO); // Assuming you have a ubo struct
 
     // In C, we use arrays instead of vectors - make sure your State struct has these arrays:
@@ -178,21 +178,21 @@ void create_uniform_buffers(State *state, VkCore *vk_core) {
         create_buffer(state, buffer_size, 
                      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                     &state->uniform_buffers[i], 
-                     &state->uniform_buffers_memmory[i], vk_core);
+                     &buffer_data->uniform_buffers[i], 
+                     &buffer_data->uniform_buffers_memory[i], vk_core);
 
-        vkMapMemory(vk_core->device, state->uniform_buffers_memmory[i], 0, buffer_size, 0, 
-                   &state->uniform_buffers_mapped[i]);
+        vkMapMemory(vk_core->device, buffer_data->uniform_buffers_memory[i], 0, buffer_size, 0, 
+                   &buffer_data->uniform_buffers_mapped[i]);
     }
 }
-void destroy_uniform_buffers(State *state, VkCore *vk_core){
+void destroy_uniform_buffers(State *state, VkCore *vk_core, BufferData *buffer_data){
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroyBuffer(vk_core->device, state->uniform_buffers[i], vk_core->allocator);
-        vkFreeMemory(vk_core->device, state->uniform_buffers_memmory[i], vk_core->allocator);
+        vkDestroyBuffer(vk_core->device, buffer_data->uniform_buffers[i], vk_core->allocator);
+        vkFreeMemory(vk_core->device, buffer_data->uniform_buffers_memory[i], vk_core->allocator);
     }
 }
 
-void update_uniform_buffer(State* state, uint32_t current_image, SwapchainData *swp_ch) {
+void update_uniform_buffer(uint32_t current_image, SwapchainData *swp_ch, BufferData *buffer_data) {
     static int initialized = 0;
     static struct timespec start_time;
     
@@ -249,7 +249,7 @@ void update_uniform_buffer(State* state, uint32_t current_image, SwapchainData *
     glm_mat4_copy(proj, ubo.proj);
     
     // Copy to mapped uniform buffer
-    memcpy(state->uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
+    memcpy(buffer_data->uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
 }
 
 VkFormat find_supported_format(State *state,

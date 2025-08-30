@@ -351,7 +351,7 @@ void destroy_sync_objects(State *state, VkCore *vk_core, SwapchainData *swp_ch) 
     free(renderer->finished_render_semaphore);
 }
 
-void record_command_buffer(State *state, SwapchainData *swp_ch) {
+void record_command_buffer(State *state, SwapchainData *swp_ch, BufferData *buffer_data) {
     VkCommandBuffer command_buffer = state->renderer.command_buffers[state->current_frame];
     
     // Reset the command buffer
@@ -384,11 +384,11 @@ void record_command_buffer(State *state, SwapchainData *swp_ch) {
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->renderer.graphics_pipeline);
 
-    VkBuffer vertex_buffers = {state->vertex_buffer};
+    VkBuffer vertex_buffers = {buffer_data->vertex_buffer};
     VkDeviceSize offsets[] = {0};
 
     vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(command_buffer, state->index_buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(command_buffer, buffer_data->index_buffer, 0, VK_INDEX_TYPE_UINT32);
 
     VkViewport viewport = {
         .x = 0.0f, .y = 0.0f,
@@ -412,12 +412,12 @@ void record_command_buffer(State *state, SwapchainData *swp_ch) {
     EXPECT(vkEndCommandBuffer(command_buffer), "Couldn't end command buffer");
 }
 
-void submit_command_buffer(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+void submit_command_buffer(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data) {
     uint32_t frame = state->current_frame;
     uint32_t image_index = swp_ch->acquired_image_index;
     VkCommandBuffer command_buffer = state->renderer.command_buffers[frame];
 
-    update_uniform_buffer(state, state->current_frame, swp_ch);
+    update_uniform_buffer(state->current_frame, swp_ch, buffer_data);
     
     EXPECT(vkQueueSubmit(vk_core->graphics_queue, 1, &(VkSubmitInfo) {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -433,7 +433,7 @@ void submit_command_buffer(State *state, VkCore *vk_core, SwapchainData *swp_ch)
     }, state->renderer.in_flight_fence[frame]), "Couldn't submit command buffer");
 }
 
-void create_renderer(State *state, VkCore *vk_core, SwapchainData *swp_ch){
+void create_renderer(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data){
     create_render_pass(state, vk_core, swp_ch);
     create_descriptor_set_layout(state, vk_core);
     create_graphics_pipeline(state, vk_core, swp_ch);
@@ -444,11 +444,11 @@ void create_renderer(State *state, VkCore *vk_core, SwapchainData *swp_ch){
     create_texture_image_view(state, vk_core);
     create_texture_sampler(state, vk_core);
     load_model(state, "./models/twitch.glb");
-    create_vertex_buffer(state, vk_core);
-    create_index_buffer(state, vk_core);
+    create_vertex_buffer(state, vk_core, buffer_data);
+    create_index_buffer(state, vk_core, buffer_data);
     create_descriptor_pool(state, vk_core);
-    create_uniform_buffers(state, vk_core);
-    create_descriptor_sets(state, vk_core);
+    create_uniform_buffers(state, vk_core, buffer_data);
+    create_descriptor_sets(state, vk_core, buffer_data);
     allocate_command_buffer(state, vk_core, swp_ch);
     create_sync_objects(state, vk_core, swp_ch);
 }
