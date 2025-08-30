@@ -50,7 +50,7 @@ void create_image(State *state, uint32_t width, uint32_t height,
     vkBindImageMemory(vk_core->device, *image, *image_memory, 0);
 }
 
-void create_texture_image(State *state, char* filename, VkCore *vk_core) {
+void create_texture_image(State *state, char* filename, VkCore *vk_core, TextureData *texture_data) {
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memmory;
 
@@ -76,13 +76,13 @@ void create_texture_image(State *state, char* filename, VkCore *vk_core) {
                  VK_IMAGE_TILING_OPTIMAL,
                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 &state->texture_image,
-                 &state->texture_image_memmory,
+                 &texture_data->texture_image,
+                 &texture_data->texture_image_memory,
                  vk_core);
 
-    transition_image_layout(state->texture_image, VK_FORMAT_R8G8B8A8_SRGB, state, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk_core);
-    copy_buffer_to_image(state, staging_buffer, state->texture_image, (uint32_t)tex_width, (uint32_t)tex_height, vk_core);
-    transition_image_layout(state->texture_image, VK_FORMAT_R8G8B8A8_SRGB, state, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vk_core);
+    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, state, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk_core);
+    copy_buffer_to_image(state, staging_buffer, texture_data->texture_image, (uint32_t)tex_width, (uint32_t)tex_height, vk_core);
+    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, state, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vk_core);
     // CLEANUP
     vkDestroyBuffer(vk_core->device, staging_buffer, vk_core->allocator);
     vkFreeMemory(vk_core->device, staging_buffer_memmory, vk_core->allocator);
@@ -186,11 +186,11 @@ void copy_buffer_to_image(State *state, VkBuffer buffer, VkImage image, uint32_t
     end_single_time_commands(state, command_buffer, vk_core);
 }
 
-void create_texture_image_view(State *state, VkCore *vk_core) {
-    state->texture_image_view = create_image_view(state, state->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, vk_core);
+void create_texture_image_view(State *state, VkCore *vk_core, TextureData *texture_data) {
+    texture_data->texture_image_view = create_image_view(state, texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, vk_core);
 }
 
-void create_texture_sampler(State *state, VkCore *vk_core) {
+void create_texture_sampler(State *state, VkCore *vk_core, TextureData *texture_data) {
     VkPhysicalDeviceProperties properties = {};
     vkGetPhysicalDeviceProperties(vk_core->physical_device, &properties);
 
@@ -212,7 +212,7 @@ void create_texture_sampler(State *state, VkCore *vk_core) {
         .minLod = 0.0f,
         .maxLod = 0.0f,
     };
-    EXPECT(vkCreateSampler(vk_core->device, &sampler_info, vk_core->allocator, &state->texture_sampler), "Failed to create texture sampler")
+    EXPECT(vkCreateSampler(vk_core->device, &sampler_info, vk_core->allocator, &texture_data->texture_sampler), "Failed to create texture sampler")
 }
 
 

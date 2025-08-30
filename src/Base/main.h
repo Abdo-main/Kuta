@@ -52,6 +52,16 @@ typedef struct {
     VkDeviceMemory staging_buffer_memory;
 } BufferData;
 
+typedef struct {
+    VkImage texture_image;
+    VkDeviceMemory texture_image_memory;
+    VkImageView texture_image_view;
+    VkSampler texture_sampler;
+    
+    VkImage depth_image;
+    VkDeviceMemory depth_image_memory;
+    VkImageView depth_image_view;
+} TextureData;
 
 typedef struct {
     VkPipeline graphics_pipeline;
@@ -86,16 +96,8 @@ typedef struct State {
     Renderer renderer;
 
 
-    VkImage texture_image;
-    VkDeviceMemory texture_image_memmory;
-    VkImageView texture_image_view;
-    VkSampler texture_sampler;
 
-    VkImage depth_image;
-    VkDeviceMemory depth_image_memmory;
-    VkImageView depth_image_view;
 
-    //Vulkan
     uint32_t current_frame;
 
 

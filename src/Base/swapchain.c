@@ -10,7 +10,7 @@
 #include "vertex_data.h"
 
 
-void acquire_next_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+void acquire_next_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
     Renderer* renderer = &state->renderer;
     uint32_t image_index;
     VkResult result = vkAcquireNextImageKHR(
@@ -22,14 +22,14 @@ void acquire_next_swapchain_image(State *state, VkCore *vk_core, SwapchainData *
     swp_ch->acquired_image_index = image_index;
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreate_swapchain(state, vk_core, swp_ch);
+        recreate_swapchain(state, vk_core, swp_ch, texture_data);
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         EXPECT(2, "failed to acquire swap chain image!");
     }
 }
 
-void present_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+void present_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
     uint32_t image_index = swp_ch->acquired_image_index;
     VkPresentInfoKHR present_info = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -43,16 +43,16 @@ void present_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_c
     VkResult result = vkQueuePresentKHR(vk_core->graphics_queue, &present_info);
     
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        recreate_swapchain(state, vk_core, swp_ch);
+        recreate_swapchain(state, vk_core, swp_ch, texture_data);
     } else if (result != VK_SUCCESS) {
         EXPECT(2, "Couldn't present swapchain image %i", swp_ch->acquired_image_index);
     }
 }
 
-void cleanup_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
-    vkDestroyImageView(vk_core->device, state->depth_image_view, vk_core->allocator);
-    vkDestroyImage(vk_core->device, state->depth_image, vk_core->allocator);
-    vkFreeMemory(vk_core->device, state->depth_image_memmory, vk_core->allocator);
+void cleanup_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
+    vkDestroyImageView(vk_core->device, texture_data->depth_image_view, vk_core->allocator);
+    vkDestroyImage(vk_core->device, texture_data->depth_image, vk_core->allocator);
+    vkFreeMemory(vk_core->device, texture_data->depth_image_memory, vk_core->allocator);
     if (swp_ch->image_views) {
         for (uint32_t i = 0; i < swp_ch->image_count; i++) {
             vkDestroyImageView(vk_core->device, swp_ch->image_views[i], vk_core->allocator);
@@ -175,7 +175,7 @@ void get_swapchain_images_and_create_image_views(State *state, VkSurfaceFormatKH
     }
 }
 
-void create_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+void create_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
     // Query the surface capabilities for the current physical device and surface
     VkSurfaceCapabilitiesKHR capabilities = get_capabilities(&vk_core->physical_device, &vk_core->surface);
     
@@ -188,7 +188,7 @@ void create_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
     // choose_extent
     swp_ch->extent = choose_extent(state->window, capabilities);
 
-    cleanup_swapchain(state, vk_core, swp_ch);
+    cleanup_swapchain(state, vk_core, swp_ch, texture_data);
 
     // Create the swapchain with the chosen parameters
     EXPECT(vkCreateSwapchainKHR(vk_core->device, &(VkSwapchainCreateInfoKHR){
@@ -213,7 +213,7 @@ void create_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
    get_swapchain_images_and_create_image_views(state, format, vk_core, swp_ch);
 }
 
-void recreate_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+void recreate_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
     int width = 0, height = 0;
     while (width == 0 || height == 0) {
         glfwGetFramebufferSize(state->window, &width, &height);
@@ -222,9 +222,9 @@ void recreate_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
     vkDeviceWaitIdle(vk_core->device);
 
     destroy_frame_buffers(state, vk_core, swp_ch);
-    cleanup_swapchain(state, vk_core, swp_ch);
+    cleanup_swapchain(state, vk_core, swp_ch, texture_data);
 
-    create_swapchain(state, vk_core, swp_ch);
-    create_depth_resources(state, vk_core, swp_ch);
-    create_frame_buffers(state, vk_core, swp_ch);
+    create_swapchain(state, vk_core, swp_ch, texture_data);
+    create_depth_resources(state, vk_core, swp_ch, texture_data);
+    create_frame_buffers(state, vk_core, swp_ch, texture_data);
 }

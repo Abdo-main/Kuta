@@ -288,14 +288,14 @@ bool has_stencil_component(VkFormat format) {
 }
 
 
-void create_depth_resources(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+void create_depth_resources(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
     VkFormat depth_format = find_depth_format(state, vk_core);
 
     create_image(state, swp_ch->extent.width, swp_ch->extent.height, depth_format,
                  VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 &state->depth_image, &state->depth_image_memmory, vk_core);
+                 &texture_data->depth_image, &texture_data->depth_image_memory, vk_core);
 
-    state->depth_image_view = create_image_view(state, state->depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT, vk_core);
-    transition_image_layout(state->depth_image, depth_format, state, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, vk_core);
+    texture_data->depth_image_view = create_image_view(state, texture_data->depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT, vk_core);
+    transition_image_layout(texture_data->depth_image, depth_format, state, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, vk_core);
 }
 

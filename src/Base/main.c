@@ -15,7 +15,7 @@
 
 
 
-void init(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data) {
+void init(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data, TextureData *texture_data) {
     setup_error_handling();
     log_info();
 
@@ -23,12 +23,12 @@ void init(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buff
 
     init_vk(vk_core, state);
 
-    create_swapchain(state, vk_core, swp_ch);
+    create_swapchain(state, vk_core, swp_ch, texture_data);
 
-    create_renderer(state, vk_core, swp_ch, buffer_data);
+    create_renderer(state, vk_core, swp_ch, buffer_data, texture_data);
 }
 
-void loop(State *state, VkCore *vk_core,SwapchainData *swp_ch, BufferData *buffer_data) {
+void loop(State *state, VkCore *vk_core,SwapchainData *swp_ch, BufferData *buffer_data, TextureData *texture_data) {
     while (!glfwWindowShouldClose(state->window)) {
         glfwPollEvents();
         
@@ -38,23 +38,23 @@ void loop(State *state, VkCore *vk_core,SwapchainData *swp_ch, BufferData *buffe
         vkWaitForFences(vk_core->device, 1, &renderer->in_flight_fence[frame], VK_TRUE, UINT64_MAX);
         vkResetFences(vk_core->device, 1, &renderer->in_flight_fence[frame]);
 
-        acquire_next_swapchain_image(state, vk_core, swp_ch);
+        acquire_next_swapchain_image(state, vk_core, swp_ch, texture_data);
         record_command_buffer(state, swp_ch, buffer_data);
         submit_command_buffer(state, vk_core, swp_ch, buffer_data);
-        present_swapchain_image(state, vk_core, swp_ch);
+        present_swapchain_image(state, vk_core, swp_ch, texture_data);
 
         state->current_frame = (state->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;    
     }
 }
 
-void cleanup(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data) {
+void cleanup(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data, TextureData *texture_data) {
     destroy_renderer(state, vk_core, swp_ch);
-    cleanup_swapchain(state, vk_core, swp_ch);  
+    cleanup_swapchain(state, vk_core, swp_ch, texture_data);  
 
-    vkDestroySampler(vk_core->device, state->texture_sampler, vk_core->allocator);
-    vkDestroyImageView(vk_core->device, state->texture_image_view, vk_core->allocator);
-    vkDestroyImage(vk_core->device, state->texture_image, vk_core->allocator);
-    vkFreeMemory(vk_core->device, state->texture_image_memmory, vk_core->allocator);
+    vkDestroySampler(vk_core->device, texture_data->texture_sampler, vk_core->allocator);
+    vkDestroyImageView(vk_core->device, texture_data->texture_image_view, vk_core->allocator);
+    vkDestroyImage(vk_core->device, texture_data->texture_image, vk_core->allocator);
+    vkFreeMemory(vk_core->device, texture_data->texture_image_memory, vk_core->allocator);
     
     destroy_uniform_buffers(state, vk_core, buffer_data);
     destroy_descriptor_sets(state, vk_core);
@@ -95,9 +95,11 @@ int main(void) {
 
     BufferData buffer_data = {};
 
-    init(&state, &vk_core, &swp_ch, &buffer_data);
-    loop(&state, &vk_core, &swp_ch, &buffer_data);
-    cleanup(&state, &vk_core, &swp_ch, &buffer_data);
+    TextureData texture_data = {};
+
+    init(&state, &vk_core, &swp_ch, &buffer_data, &texture_data);
+    loop(&state, &vk_core, &swp_ch, &buffer_data, &texture_data);
+    cleanup(&state, &vk_core, &swp_ch, &buffer_data, &texture_data);
 
     return EXIT_SUCCESS;
 }

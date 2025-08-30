@@ -245,7 +245,7 @@ void destroy_render_pass(State *state, VkCore *vk_core){
     vkDestroyRenderPass(vk_core->device, state->renderer.render_pass, vk_core->allocator);
 }
 
-void create_frame_buffers(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+void create_frame_buffers(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
     uint32_t frame_buffer_count = swp_ch->image_count;
     state->renderer.frame_buffers = malloc(frame_buffer_count * sizeof(VkFramebuffer));
     EXPECT(state->renderer.frame_buffers == NULL, "Couldn't allocate memory for framebuffers array")
@@ -256,7 +256,7 @@ void create_frame_buffers(State *state, VkCore *vk_core, SwapchainData *swp_ch) 
     for (int framebufferIndex = 0; framebufferIndex < frame_buffer_count; ++framebufferIndex) {
         VkImageView attachments[2] = {
             swp_ch->image_views[framebufferIndex],
-            state->depth_image_view,
+            texture_data->depth_image_view,
         };
         EXPECT(vkCreateFramebuffer(vk_core->device, &(VkFramebufferCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -433,22 +433,22 @@ void submit_command_buffer(State *state, VkCore *vk_core, SwapchainData *swp_ch,
     }, state->renderer.in_flight_fence[frame]), "Couldn't submit command buffer");
 }
 
-void create_renderer(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data){
+void create_renderer(State *state, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data, TextureData *texture_data){
     create_render_pass(state, vk_core, swp_ch);
     create_descriptor_set_layout(state, vk_core);
     create_graphics_pipeline(state, vk_core, swp_ch);
     create_command_pool(state, vk_core);
-    create_depth_resources(state, vk_core, swp_ch);
-    create_frame_buffers(state, vk_core, swp_ch);
-    create_texture_image(state, "./textures/pasted__twitch.png", vk_core);
-    create_texture_image_view(state, vk_core);
-    create_texture_sampler(state, vk_core);
+    create_depth_resources(state, vk_core, swp_ch, texture_data);
+    create_frame_buffers(state, vk_core, swp_ch, texture_data);
+    create_texture_image(state, "./textures/pasted__twitch.png", vk_core, texture_data);
+    create_texture_image_view(state, vk_core, texture_data);
+    create_texture_sampler(state, vk_core, texture_data);
     load_model(state, "./models/twitch.glb");
     create_vertex_buffer(state, vk_core, buffer_data);
     create_index_buffer(state, vk_core, buffer_data);
     create_descriptor_pool(state, vk_core);
     create_uniform_buffers(state, vk_core, buffer_data);
-    create_descriptor_sets(state, vk_core, buffer_data);
+    create_descriptor_sets(state, vk_core, buffer_data, texture_data);
     allocate_command_buffer(state, vk_core, swp_ch);
     create_sync_objects(state, vk_core, swp_ch);
 }

@@ -34,8 +34,7 @@ void create_buffer(State *state, VkDeviceSize size,
        VkDeviceMemory* buffer_memory,
        VkCore *vk_core);
 
-void create_depth_resources(State *state, VkCore *vk_core, SwapchainData *swp_ch);
-
+void create_depth_resources(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data);
 
 VkFormat find_depth_format(State *state, VkCore *vk_core);
 
