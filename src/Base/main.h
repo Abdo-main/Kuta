@@ -25,10 +25,19 @@ typedef struct {
     VkAllocationCallbacks* allocator;
 } VkCore;
 
+typedef struct {
+    VkSwapchainKHR swapchain;
+    VkImage* images;
+    VkImageView* image_views;
+    VkFormat image_format;
+    VkExtent2D extent;
+    uint32_t image_count;
+    uint32_t acquired_image_index;
+} SwapchainData;
+
 
 typedef struct {
     VkPipeline graphics_pipeline;
-    VkExtent2D image_extent;
     VkPipelineLayout pipeline_layout;
     VkRenderPass render_pass;
     VkCommandPool command_pool;
@@ -57,7 +66,6 @@ typedef struct State {
     GLFWwindow *window;
     GLFWmonitor *windowMonitor;
 
-    VkFormat image_format;
     Renderer renderer;
 
 
@@ -71,7 +79,6 @@ typedef struct State {
     VkImageView depth_image_view;
 
     //Vulkan
-    uint32_t swap_chain_image_count;
     uint32_t current_frame;
 
 
@@ -93,9 +100,5 @@ typedef struct State {
     void* uniform_buffers_mapped[MAX_FRAMES_IN_FLIGHT];
 
     VkClearColorValue background_color;
-    VkSwapchainKHR swap_chain;
-    VkImage *swap_chain_images;
-    VkImageView *swap_chain_image_views;
-    uint32_t acquired_image_index;
 
 } State;

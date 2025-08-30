@@ -31,13 +31,14 @@ void create_buffer(State *state, VkDeviceSize size,
        VkDeviceMemory* buffer_memory,
        VkCore *vk_core);
 
-void create_depth_resources(State *state, VkCore *vk_core);
+void create_depth_resources(State *state, VkCore *vk_core, SwapchainData *swp_ch);
 
 
 VkFormat find_depth_format(State *state, VkCore *vk_core);
 
 
-void update_uniform_buffer(State* state, uint32_t currentImage);
+void update_uniform_buffer(State* state, uint32_t current_image, SwapchainData *swp_ch);
+
 
 
 void destroy_vertex_buffer(State *state, VkCore *vk_core);

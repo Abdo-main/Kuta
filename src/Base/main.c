@@ -15,7 +15,7 @@
 
 
 
-void init(State *state, VkCore *vk_core) {
+void init(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
     setup_error_handling();
     log_info();
 
@@ -23,11 +23,12 @@ void init(State *state, VkCore *vk_core) {
 
     init_vk(vk_core, state);
 
-    create_swapchain(state, vk_core);
-    create_renderer(state, vk_core);
+    create_swapchain(state, vk_core, swp_ch);
+
+    create_renderer(state, vk_core, swp_ch);
 }
 
-void loop(State *state, VkCore *vk_core) {
+void loop(State *state, VkCore *vk_core,SwapchainData *swp_ch) {
     while (!glfwWindowShouldClose(state->window)) {
         glfwPollEvents();
         
@@ -37,18 +38,18 @@ void loop(State *state, VkCore *vk_core) {
         vkWaitForFences(vk_core->device, 1, &renderer->in_flight_fence[frame], VK_TRUE, UINT64_MAX);
         vkResetFences(vk_core->device, 1, &renderer->in_flight_fence[frame]);
 
-        acquire_next_swapchain_image(state, vk_core);
-        record_command_buffer(state);
-        submit_command_buffer(state, vk_core);
-        present_swapchain_image(state, vk_core);
+        acquire_next_swapchain_image(state, vk_core, swp_ch);
+        record_command_buffer(state, swp_ch);
+        submit_command_buffer(state, vk_core, swp_ch);
+        present_swapchain_image(state, vk_core, swp_ch);
 
         state->current_frame = (state->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;    
     }
 }
 
-void cleanup(State *state, VkCore *vk_core) {
-    destroy_renderer(state, vk_core);
-    cleanup_swapchain(state, vk_core);  
+void cleanup(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
+    destroy_renderer(state, vk_core, swp_ch);
+    cleanup_swapchain(state, vk_core, swp_ch);  
 
     vkDestroySampler(vk_core->device, state->texture_sampler, vk_core->allocator);
     vkDestroyImageView(vk_core->device, state->texture_image_view, vk_core->allocator);
@@ -90,9 +91,11 @@ int main(void) {
         .api_version = VK_API_VERSION_1_4,
     };
 
-    init(&state, &vk_core);
-    loop(&state, &vk_core);
-    cleanup(&state, &vk_core);
+    SwapchainData swp_ch = {};
+
+    init(&state, &vk_core, &swp_ch);
+    loop(&state, &vk_core, &swp_ch);
+    cleanup(&state, &vk_core, &swp_ch);
 
     return EXIT_SUCCESS;
 }

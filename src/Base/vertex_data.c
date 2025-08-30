@@ -192,7 +192,7 @@ void destroy_uniform_buffers(State *state, VkCore *vk_core){
     }
 }
 
-void update_uniform_buffer(State* state, uint32_t current_image) {
+void update_uniform_buffer(State* state, uint32_t current_image, SwapchainData *swp_ch) {
     static int initialized = 0;
     static struct timespec start_time;
     
@@ -243,7 +243,7 @@ void update_uniform_buffer(State* state, uint32_t current_image) {
     // Create projection matrix
     mat4 proj;
     glm_perspective(glm_rad(45.0f), 
-                   state->renderer.image_extent.width / (float)state->renderer.image_extent.height,
+                   swp_ch->extent.width / (float)swp_ch->extent.height,
                    0.1f, 10.0f, proj);
     proj[1][1] *= -1; // Flip Y axis for Vulkan (GLM doesn't do this automatically in cglm)
     glm_mat4_copy(proj, ubo.proj);
@@ -288,10 +288,10 @@ bool has_stencil_component(VkFormat format) {
 }
 
 
-void create_depth_resources(State *state, VkCore *vk_core) {
+void create_depth_resources(State *state, VkCore *vk_core, SwapchainData *swp_ch) {
     VkFormat depth_format = find_depth_format(state, vk_core);
 
-    create_image(state, state->renderer.image_extent.width, state->renderer.image_extent.height, depth_format,
+    create_image(state, swp_ch->extent.width, swp_ch->extent.height, depth_format,
                  VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                  &state->depth_image, &state->depth_image_memmory, vk_core);
 
