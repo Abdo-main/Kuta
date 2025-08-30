@@ -20,21 +20,6 @@
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
-Vertex vertices[8] = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-uint16_t indices[12] = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
 
 VkVertexInputBindingDescription get_binding_description() {
     VkVertexInputBindingDescription binding_description = {
@@ -128,8 +113,8 @@ void copy_buffer(State *state, VkDeviceSize size, VkBuffer src_buffer, VkBuffer 
 }
 
 void create_vertex_buffer(State *state) {
-    size_t vertex_count = sizeof(vertices) / sizeof(vertices[0]);
-    VkDeviceSize buffer_size = sizeof(vertices[0]) * vertex_count;
+    size_t vertex_count = state->vertex_count;
+    VkDeviceSize buffer_size = sizeof(state->vertices[0]) * vertex_count;
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
@@ -137,7 +122,7 @@ void create_vertex_buffer(State *state) {
         
     void* data;
     vkMapMemory(state->device, state->staging_buffer_memmory, 0, buffer_size, 0, &data);
-       memcpy(data, vertices, (size_t)buffer_size);
+       memcpy(data, state->vertices, (size_t)buffer_size);
     vkUnmapMemory(state->device, state->staging_buffer_memmory);
 
     create_buffer(state, buffer_size, 
@@ -157,8 +142,8 @@ void destroy_vertex_buffer(State *state){
 }
 
 void create_index_buffer(State *state) {
-    size_t indices_count = sizeof(indices) / sizeof(indices[0]);
-    VkDeviceSize buffer_size = sizeof(indices[0]) * indices_count;
+    size_t indices_count = state->index_count;
+    VkDeviceSize buffer_size = sizeof(state->indices[0]) * indices_count;
 
     create_buffer(state, buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
@@ -166,7 +151,7 @@ void create_index_buffer(State *state) {
         
     void* data;
     vkMapMemory(state->device, state->staging_buffer_memmory, 0, buffer_size, 0, &data);
-       memcpy(data, indices, (size_t)buffer_size);
+       memcpy(data, state->indices, (size_t)buffer_size);
     vkUnmapMemory(state->device, state->staging_buffer_memmory);
 
     create_buffer(state, buffer_size, 
@@ -231,8 +216,17 @@ void update_uniform_buffer(State* state, uint32_t current_image) {
     // Create model matrix with rotation over time
     mat4 model;
     glm_mat4_identity(model);
+
+  // Rotate 90 degrees around X-axis
+    vec3 ax = {1.0f, 0.0f, 0.0f}; // Rotate around X-axis
+    float ang = glm_rad(90.0f);   // -90 degrees to make it stand up
+    glm_rotate(model, ang, ax);
+
+    // Scale down the model (adjust this value as needed)
+    vec3 scale = {0.01f, 0.01f, 0.01f}; // Scale to 10% of original size
+    glm_scale(model, scale);
     
-    vec3 axis = {0.0f, 0.0f, 1.0f};
+    vec3 axis = {0.0f, 1.0f, 0.0f};
     float angle = time * glm_rad(90.0f); // Rotate 90 degrees per second
     glm_rotate(model, angle, axis);
     glm_mat4_copy(model, ubo.model);

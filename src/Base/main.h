@@ -5,8 +5,15 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 #include <vulkan/vulkan_core.h>
-
+#include "cglm/cglm.h"
 #define MAX_FRAMES_IN_FLIGHT 2
+
+typedef struct {
+    vec3 pos;
+    vec3 color;
+    vec2 tex_coord;
+}Vertex;
+
 
 typedef struct {
     VkPipeline graphics_pipeline;
@@ -42,6 +49,7 @@ typedef struct State {
     VkFormat image_format;
     Renderer renderer;
 
+
     VkImage texture_image;
     VkDeviceMemory texture_image_memmory;
     VkImageView texture_image_view;
@@ -64,6 +72,11 @@ typedef struct State {
     VkSurfaceKHR surface;
     VkDevice device;
     VkQueue queue;
+
+    Vertex* vertices;
+    uint32_t* indices;
+    size_t vertex_count;
+    size_t index_count;
 
     VkBuffer vertex_buffer;
     VkDeviceMemory vertex_buffer_memmory;

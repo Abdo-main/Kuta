@@ -28,6 +28,15 @@ void init(State *state) {
     create_device(state);
     get_queue(state);
     create_swapchain(state);
+    state->vertex_count = 4;
+    state->vertices = malloc(state->vertex_count * sizeof(Vertex));
+    state->vertices[0] = (Vertex){{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}};
+    // ... add more vertices
+
+    state->index_count = 6;
+    state->indices = malloc(state->index_count * sizeof(uint32_t));
+    state->indices[0] = 0; state->indices[1] = 1; state->indices[2] = 2;
+    // ... add more indices
     create_renderer(state);
 }
 
@@ -88,7 +97,7 @@ int main(void) {
         .window_height = 600,
         .window_fullscreen = false,
         .api_version = VK_API_VERSION_1_4,
-        .background_color = (VkClearColorValue){{1.0f, 0.5f, 0.0f, 1.0f}}
+        .background_color = (VkClearColorValue){{0.3f, 0.1f, 0.0f, 1.0f}}
     };
 
     init(&state);

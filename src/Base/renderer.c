@@ -7,6 +7,7 @@
 
 
 #include "main.h"
+#include "models.h"
 #include "textures.h"
 #include "vertex_data.h"
 #include "utils.h"
@@ -389,7 +390,7 @@ void record_command_buffer(State *state) {
     VkDeviceSize offsets[] = {0};
 
     vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(command_buffer, state->index_buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(command_buffer, state->index_buffer, 0, VK_INDEX_TYPE_UINT32);
 
     VkViewport viewport = {
         .x = 0.0f, .y = 0.0f,
@@ -406,7 +407,7 @@ void record_command_buffer(State *state) {
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->renderer.pipeline_layout, 0, 1, &state->renderer.descriptor_sets[state->current_frame], 0, NULL);
-    uint32_t index_count = sizeof(indices) / sizeof(indices[0]); 
+    uint32_t index_count = state->index_count; 
     vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
     vkCmdEndRenderPass(command_buffer);
 
@@ -441,9 +442,10 @@ void create_renderer(State *state){
     create_command_pool(state);
     create_depth_resources(state);
     create_frame_buffers(state);
-    create_texture_image(state, "./textures/twitch.jpg");
+    create_texture_image(state, "./textures/pasted__twitch.png");
     create_texture_image_view(state);
     create_texture_sampler(state);
+    load_model(state, "./models/twitch.glb");
     create_vertex_buffer(state);
     create_index_buffer(state);
     create_descriptor_pool(state);

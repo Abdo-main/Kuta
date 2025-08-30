@@ -34,6 +34,7 @@ add_executable(kuta
     ${SRC_DIR}/utils.c
     ${SRC_DIR}/descriptors.c
     ${SRC_DIR}/textures.c
+    ${SRC_DIR}/models.c
 )
 
 # Platform-specific settings
@@ -44,7 +45,7 @@ if(WIN32)
     # target_link_libraries(kuta PRIVATE -lgdi32 -luser32 -lkernel32)
 elseif(UNIX)
     # Linux-specific
-    target_link_libraries(kuta PRIVATE glfw Vulkan::Vulkan cglm m)
+    target_link_libraries(kuta PRIVATE glfw Vulkan::Vulkan cglm m assimp)
 endif()
 
 # Include directories (CMake handles Vulkan/cglm includes if found)

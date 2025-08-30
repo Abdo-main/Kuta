@@ -5,18 +5,10 @@
 #include "main.h"
 
 typedef struct {
-    vec3 pos;
-    vec3 color;
-    vec2 tex_coord;
-}Vertex;
-
-typedef struct {
     VkVertexInputAttributeDescription items[3];
     size_t count;
 } AttributeDescriptions;
 
-extern Vertex vertices[8];
-extern uint16_t indices[12];
 
 VkVertexInputBindingDescription get_binding_description();
 
