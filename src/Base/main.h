@@ -102,3 +102,10 @@ typedef struct {
     const char *engine_name;
     VkClearColorValue background_color;
 } Config;
+
+typedef struct {
+    Renderer renderer;
+    SwapchainData swp_ch;
+    VkCore vk_core;
+    WindowData window_data;
+} State;

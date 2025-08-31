@@ -11,8 +11,8 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
-#include "main.h"
-#include "vertex_data.h"
+#include "main.h" 
+#include "vertex_data.h" 
 #include "textures.h"
 #include "utils.h"
 #include "descriptors.h"
@@ -54,9 +54,9 @@ AttributeDescriptions get_attribute_descriptions(void) {
     return descs;
 }
 
-uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties, VkCore *vk_core) {
+uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties, State *state) {
     VkPhysicalDeviceMemoryProperties mem_properties;
-    vkGetPhysicalDeviceMemoryProperties(vk_core->physical_device, &mem_properties);
+    vkGetPhysicalDeviceMemoryProperties(state->vk_core.physical_device, &mem_properties);
 
     for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
         if ((type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -67,19 +67,19 @@ uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties
     return 0;
 }
 
-void alloc_buffer(VkBuffer *buffer, VkDeviceMemory *buffer_memory, VkMemoryPropertyFlags properties, VkCore *vk_core){
+void alloc_buffer(VkBuffer *buffer, VkDeviceMemory *buffer_memory, VkMemoryPropertyFlags properties, State *state){
     VkMemoryRequirements mem_requirements;
-    vkGetBufferMemoryRequirements(vk_core->device, *(buffer), &mem_requirements);
+    vkGetBufferMemoryRequirements(state->vk_core.device, *(buffer), &mem_requirements);
 
 
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = mem_requirements.size,
-        .memoryTypeIndex = find_memory_type(mem_requirements.memoryTypeBits, properties, vk_core),
+        .memoryTypeIndex = find_memory_type(mem_requirements.memoryTypeBits, properties, state),
     };
 
-    EXPECT(vkAllocateMemory(vk_core->device, &alloc_info, vk_core->allocator, buffer_memory), "Failed to allocate for vertex_buffer_memory")
-    vkBindBufferMemory(vk_core->device, *(buffer), *(buffer_memory), 0);
+    EXPECT(vkAllocateMemory(state->vk_core.device, &alloc_info, state->vk_core.allocator, buffer_memory), "Failed to allocate for vertex_buffer_memory")
+    vkBindBufferMemory(state->vk_core.device, *(buffer), *(buffer_memory), 0);
 }
 
 void create_buffer(VkDeviceSize size,
@@ -87,7 +87,7 @@ void create_buffer(VkDeviceSize size,
        VkMemoryPropertyFlags properties,
        VkBuffer* buffer, 
        VkDeviceMemory* buffer_memory,
-       VkCore *vk_core) {
+       State *state) {
 
     VkBufferCreateInfo buffer_info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -95,13 +95,13 @@ void create_buffer(VkDeviceSize size,
         .usage = usage,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
-    EXPECT(vkCreateBuffer(vk_core->device, &buffer_info, vk_core->allocator, buffer), "failed to create vertex buffer!")
+    EXPECT(vkCreateBuffer(state->vk_core.device, &buffer_info, state->vk_core.allocator, buffer), "failed to create vertex buffer!")
 
-    alloc_buffer(buffer, buffer_memory, properties, vk_core);
+    alloc_buffer(buffer, buffer_memory, properties, state);
 }
 
-void copy_buffer(VkDeviceSize size, VkBuffer src_buffer, VkBuffer dst_buffer, VkCore *vk_core, Renderer *renderer) {
-    VkCommandBuffer command_buffer = begin_single_time_commands(vk_core, renderer);
+void copy_buffer(VkDeviceSize size, VkBuffer src_buffer, VkBuffer dst_buffer, State *state) {
+    VkCommandBuffer command_buffer = begin_single_time_commands(state);
 
     VkBufferCopy copy_region = {
         .srcOffset = 0,
@@ -110,67 +110,67 @@ void copy_buffer(VkDeviceSize size, VkBuffer src_buffer, VkBuffer dst_buffer, Vk
     };
     vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
     
-    end_single_time_commands(command_buffer, vk_core, renderer);
+    end_single_time_commands(command_buffer, state);
 }
 
-void create_vertex_buffer(VkCore *vk_core, BufferData *buffer_data, GeometryData *geometry_data, Renderer *renderer) {
+void create_vertex_buffer(BufferData *buffer_data, GeometryData *geometry_data, State *state) {
     size_t vertex_count = geometry_data->vertex_count;
     VkDeviceSize buffer_size = sizeof(geometry_data->vertices[0]) * vertex_count;
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-    &buffer_data->staging_buffer, &buffer_data->staging_buffer_memory, vk_core);
+    &buffer_data->staging_buffer, &buffer_data->staging_buffer_memory, state);
         
     void* data;
-    vkMapMemory(vk_core->device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
+    vkMapMemory(state->vk_core.device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
        memcpy(data, geometry_data->vertices, (size_t)buffer_size);
-    vkUnmapMemory(vk_core->device, buffer_data->staging_buffer_memory);
+    vkUnmapMemory(state->vk_core.device, buffer_data->staging_buffer_memory);
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-    &buffer_data->vertex_buffer, &buffer_data->vertex_buffer_memory, vk_core);
+    &buffer_data->vertex_buffer, &buffer_data->vertex_buffer_memory, state);
 
-    copy_buffer(buffer_size, buffer_data->staging_buffer, buffer_data->vertex_buffer, vk_core, renderer);
+    copy_buffer(buffer_size, buffer_data->staging_buffer, buffer_data->vertex_buffer, state);
 
-    vkDestroyBuffer(vk_core->device, buffer_data->staging_buffer, vk_core->allocator);
-    vkFreeMemory(vk_core->device, buffer_data->staging_buffer_memory, vk_core->allocator);
+    vkDestroyBuffer(state->vk_core.device, buffer_data->staging_buffer, state->vk_core.allocator);
+    vkFreeMemory(state->vk_core.device, buffer_data->staging_buffer_memory, state->vk_core.allocator);
 }
 
-void destroy_vertex_buffer(VkCore *vk_core, BufferData *buffer_data){
-    vkDestroyBuffer(vk_core->device, buffer_data->vertex_buffer, vk_core->allocator);
-    vkFreeMemory(vk_core->device, buffer_data->vertex_buffer_memory, vk_core->allocator);
+void destroy_vertex_buffer(BufferData *buffer_data, State *state){
+    vkDestroyBuffer(state->vk_core.device, buffer_data->vertex_buffer, state->vk_core.allocator);
+    vkFreeMemory(state->vk_core.device, buffer_data->vertex_buffer_memory, state->vk_core.allocator);
 }
 
-void create_index_buffer(VkCore *vk_core, BufferData *buffer_data, GeometryData *geometry_data, Renderer *renderer) {
+void create_index_buffer(BufferData *buffer_data, GeometryData *geometry_data, State *state) {
     size_t indices_count = geometry_data->index_count;
     VkDeviceSize buffer_size = sizeof(geometry_data->indices[0]) * indices_count;
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-    &buffer_data->staging_buffer, &buffer_data->staging_buffer_memory, vk_core);
+    &buffer_data->staging_buffer, &buffer_data->staging_buffer_memory, state);
         
     void* data;
-    vkMapMemory(vk_core->device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
+    vkMapMemory(state->vk_core.device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
        memcpy(data, geometry_data->indices, (size_t)buffer_size);
-    vkUnmapMemory(vk_core->device, buffer_data->staging_buffer_memory);
+    vkUnmapMemory(state->vk_core.device, buffer_data->staging_buffer_memory);
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-    &buffer_data->index_buffer, &buffer_data->index_buffer_memory, vk_core);
+    &buffer_data->index_buffer, &buffer_data->index_buffer_memory, state);
 
-    copy_buffer(buffer_size, buffer_data->staging_buffer, buffer_data->index_buffer, vk_core, renderer);
+    copy_buffer(buffer_size, buffer_data->staging_buffer, buffer_data->index_buffer, state);
 
-    vkDestroyBuffer(vk_core->device, buffer_data->staging_buffer, vk_core->allocator);
-    vkFreeMemory(vk_core->device, buffer_data->staging_buffer_memory, vk_core->allocator);
+    vkDestroyBuffer(state->vk_core.device, buffer_data->staging_buffer, state->vk_core.allocator);
+    vkFreeMemory(state->vk_core.device, buffer_data->staging_buffer_memory, state->vk_core.allocator);
 }
 
-void destroy_index_buffer(VkCore *vk_core, BufferData *buffer_data){
-    vkDestroyBuffer(vk_core->device, buffer_data->index_buffer, vk_core->allocator);
-    vkFreeMemory(vk_core->device, buffer_data->index_buffer_memory, vk_core->allocator);
+void destroy_index_buffer(BufferData *buffer_data, State *state){
+    vkDestroyBuffer(state->vk_core.device, buffer_data->index_buffer, state->vk_core.allocator);
+    vkFreeMemory(state->vk_core.device, buffer_data->index_buffer_memory, state->vk_core.allocator);
 }
 
-void create_uniform_buffers(VkCore *vk_core, BufferData *buffer_data) {
+void create_uniform_buffers(State *state, BufferData *buffer_data) {
     VkDeviceSize buffer_size = sizeof(UBO); // Assuming you have a ubo struct
 
     // In C, we use arrays instead of vectors - make sure your struct has these arrays:
@@ -179,20 +179,20 @@ void create_uniform_buffers(VkCore *vk_core, BufferData *buffer_data) {
                      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                      &buffer_data->uniform_buffers[i], 
-                     &buffer_data->uniform_buffers_memory[i], vk_core);
+                     &buffer_data->uniform_buffers_memory[i], state);
 
-        vkMapMemory(vk_core->device, buffer_data->uniform_buffers_memory[i], 0, buffer_size, 0, 
+        vkMapMemory(state->vk_core.device, buffer_data->uniform_buffers_memory[i], 0, buffer_size, 0, 
                    &buffer_data->uniform_buffers_mapped[i]);
     }
 }
-void destroy_uniform_buffers(VkCore *vk_core, BufferData *buffer_data){
+void destroy_uniform_buffers(BufferData *buffer_data, State *state){
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroyBuffer(vk_core->device, buffer_data->uniform_buffers[i], vk_core->allocator);
-        vkFreeMemory(vk_core->device, buffer_data->uniform_buffers_memory[i], vk_core->allocator);
+        vkDestroyBuffer(state->vk_core.device, buffer_data->uniform_buffers[i], state->vk_core.allocator);
+        vkFreeMemory(state->vk_core.device, buffer_data->uniform_buffers_memory[i], state->vk_core.allocator);
     }
 }
 
-void update_uniform_buffer(uint32_t current_image, SwapchainData *swp_ch, BufferData *buffer_data) {
+void update_uniform_buffer(uint32_t current_image, State *state, BufferData *buffer_data) {
     static int initialized = 0;
     static struct timespec start_time;
     
@@ -243,7 +243,7 @@ void update_uniform_buffer(uint32_t current_image, SwapchainData *swp_ch, Buffer
     // Create projection matrix
     mat4 proj;
     glm_perspective(glm_rad(45.0f), 
-                   swp_ch->extent.width / (float)swp_ch->extent.height,
+                   state->swp_ch.extent.width / (float)state->swp_ch.extent.height,
                    0.1f, 10.0f, proj);
     proj[1][1] *= -1; // Flip Y axis for Vulkan (GLM doesn't do this automatically in cglm)
     glm_mat4_copy(proj, ubo.proj);
@@ -255,11 +255,11 @@ void update_uniform_buffer(uint32_t current_image, SwapchainData *swp_ch, Buffer
 VkFormat find_supported_format(VkFormat *candidates,
                                size_t candidate_count,
                                VkImageTiling tiling,
-                               VkFormatFeatureFlags features, VkCore *vk_core) {
+                               VkFormatFeatureFlags features, State *state) {
     for (size_t i = 0; i < candidate_count; i++) {
         VkFormat format = candidates[i];
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(vk_core->physical_device, format, &props);
+        vkGetPhysicalDeviceFormatProperties(state->vk_core.physical_device, format, &props);
 
         if (tiling == VK_IMAGE_TILING_LINEAR &&
             (props.linearTilingFeatures & features) == features) {
@@ -273,13 +273,13 @@ VkFormat find_supported_format(VkFormat *candidates,
     return VK_FORMAT_UNDEFINED;
 }
 
-VkFormat find_depth_format(VkCore *vk_core) {
+VkFormat find_depth_format(State *state) {
     VkFormat candidates[] = {
        VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT 
     };
     return find_supported_format(candidates, sizeof(candidates)/sizeof(candidates[0]), 
                                  VK_IMAGE_TILING_OPTIMAL,
-                                 VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, vk_core);
+                                 VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, state);
 }
 
 bool has_stencil_component(VkFormat format) {
@@ -287,14 +287,14 @@ bool has_stencil_component(VkFormat format) {
 }
 
 
-void create_depth_resources(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data, Renderer *renderer) {
-    VkFormat depth_format = find_depth_format(vk_core);
+void create_depth_resources(TextureData *texture_data, State *state) {
+    VkFormat depth_format = find_depth_format(state);
 
-    create_image(swp_ch->extent.width, swp_ch->extent.height, depth_format,
+    create_image(state->swp_ch.extent.width, state->swp_ch.extent.height, depth_format,
                  VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 &texture_data->depth_image, &texture_data->depth_image_memory, vk_core);
+                 &texture_data->depth_image, &texture_data->depth_image_memory, state);
 
-    texture_data->depth_image_view = create_image_view(texture_data->depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT, vk_core);
-    transition_image_layout(texture_data->depth_image, depth_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, vk_core, renderer);
+    texture_data->depth_image_view = create_image_view(texture_data->depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT, state);
+    transition_image_layout(texture_data->depth_image, depth_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, state);
 }
 

@@ -16,7 +16,7 @@ void create_image(uint32_t width, uint32_t height,
                   VkMemoryPropertyFlags properties,
                   VkImage* image,
                   VkDeviceMemory* image_memory,
-                  VkCore *vk_core
+                  State *state
                   ) {
 
     VkImageCreateInfo image_info = {
@@ -35,22 +35,22 @@ void create_image(uint32_t width, uint32_t height,
         .samples = VK_SAMPLE_COUNT_1_BIT,
     };
 
-    EXPECT(vkCreateImage(vk_core->device, &image_info, vk_core->allocator, image), "Failed to create image")
+    EXPECT(vkCreateImage(state->vk_core.device, &image_info, state->vk_core.allocator, image), "Failed to create image")
 
     VkMemoryRequirements mem_requirements;
-    vkGetImageMemoryRequirements(vk_core->device, *image, &mem_requirements);
+    vkGetImageMemoryRequirements(state->vk_core.device, *image, &mem_requirements);
 
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = mem_requirements.size,
-        .memoryTypeIndex = find_memory_type(mem_requirements.memoryTypeBits, properties, vk_core),
+        .memoryTypeIndex = find_memory_type(mem_requirements.memoryTypeBits, properties, state),
     };
 
-    EXPECT(vkAllocateMemory(vk_core->device, &alloc_info, vk_core->allocator, image_memory), "Failed to allocate memmory for image")
-    vkBindImageMemory(vk_core->device, *image, *image_memory, 0);
+    EXPECT(vkAllocateMemory(state->vk_core.device, &alloc_info, state->vk_core.allocator, image_memory), "Failed to allocate memmory for image")
+    vkBindImageMemory(state->vk_core.device, *image, *image_memory, 0);
 }
 
-void create_texture_image(char* filename, VkCore *vk_core, TextureData *texture_data, Renderer *renderer) {
+void create_texture_image(char* filename, TextureData *texture_data, State *state) {
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memmory;
 
@@ -62,12 +62,12 @@ void create_texture_image(char* filename, VkCore *vk_core, TextureData *texture_
 
     create_buffer(image_size,
                   VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                  &staging_buffer, &staging_buffer_memmory, vk_core);
+                  &staging_buffer, &staging_buffer_memmory, state);
 
     void* data;
-    vkMapMemory(vk_core->device, staging_buffer_memmory, 0, image_size, 0, &data);
+    vkMapMemory(state->vk_core.device, staging_buffer_memmory, 0, image_size, 0, &data);
         memcpy(data, pixels, (size_t)image_size);
-    vkUnmapMemory(vk_core->device, staging_buffer_memmory);
+    vkUnmapMemory(state->vk_core.device, staging_buffer_memmory);
 
     stbi_image_free(pixels);
 
@@ -78,19 +78,19 @@ void create_texture_image(char* filename, VkCore *vk_core, TextureData *texture_
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                  &texture_data->texture_image,
                  &texture_data->texture_image_memory,
-                 vk_core);
+                 state);
 
-    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk_core, renderer);
-    copy_buffer_to_image(staging_buffer, texture_data->texture_image, (uint32_t)tex_width, (uint32_t)tex_height, vk_core, renderer);
-    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vk_core, renderer);
+    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, state);
+    copy_buffer_to_image(staging_buffer, texture_data->texture_image, (uint32_t)tex_width, (uint32_t)tex_height, state);
+    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, state);
     // CLEANUP
-    vkDestroyBuffer(vk_core->device, staging_buffer, vk_core->allocator);
-    vkFreeMemory(vk_core->device, staging_buffer_memmory, vk_core->allocator);
+    vkDestroyBuffer(state->vk_core.device, staging_buffer, state->vk_core.allocator);
+    vkFreeMemory(state->vk_core.device, staging_buffer_memmory, state->vk_core.allocator);
 
 }
 
-void transition_image_layout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout, VkCore *vk_core, Renderer *renderer) {
-    VkCommandBuffer command_buffer = begin_single_time_commands(vk_core, renderer);
+void transition_image_layout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout, State *state) {
+    VkCommandBuffer command_buffer = begin_single_time_commands(state);
 
 
     VkImageMemoryBarrier barrier = {
@@ -152,11 +152,11 @@ void transition_image_layout(VkImage image, VkFormat format, VkImageLayout old_l
     );
     
 
-    end_single_time_commands(command_buffer, vk_core, renderer);
+    end_single_time_commands(command_buffer, state);
 }
 
-void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, VkCore *vk_core, Renderer *renderer) {
-    VkCommandBuffer command_buffer = begin_single_time_commands(vk_core, renderer);
+void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, State *state) {
+    VkCommandBuffer command_buffer = begin_single_time_commands(state);
     
     VkBufferImageCopy region = {
         .bufferOffset = 0,
@@ -183,16 +183,16 @@ void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32
         &region
     );
 
-    end_single_time_commands(command_buffer, vk_core, renderer);
+    end_single_time_commands(command_buffer, state);
 }
 
-void create_texture_image_view(VkCore *vk_core, TextureData *texture_data) {
-    texture_data->texture_image_view = create_image_view(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, vk_core);
+void create_texture_image_view(State *state, TextureData *texture_data) {
+    texture_data->texture_image_view = create_image_view(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, state);
 }
 
-void create_texture_sampler(VkCore *vk_core, TextureData *texture_data) {
+void create_texture_sampler(State *state, TextureData *texture_data) {
     VkPhysicalDeviceProperties properties = {};
-    vkGetPhysicalDeviceProperties(vk_core->physical_device, &properties);
+    vkGetPhysicalDeviceProperties(state->vk_core.physical_device, &properties);
 
     VkSamplerCreateInfo sampler_info = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -212,7 +212,7 @@ void create_texture_sampler(VkCore *vk_core, TextureData *texture_data) {
         .minLod = 0.0f,
         .maxLod = 0.0f,
     };
-    EXPECT(vkCreateSampler(vk_core->device, &sampler_info, vk_core->allocator, &texture_data->texture_sampler), "Failed to create texture sampler")
+    EXPECT(vkCreateSampler(state->vk_core.device, &sampler_info, state->vk_core.allocator, &texture_data->texture_sampler), "Failed to create texture sampler")
 }
 
 

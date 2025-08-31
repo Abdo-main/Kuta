@@ -2,5 +2,5 @@
 
 #include "main.h"
 
-void init_vk(VkCore *vk_core, Config *config, WindowData *window_data);
+void init_vk(Config *config, State *state);
 

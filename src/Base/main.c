@@ -15,64 +15,64 @@
 
 
 
-void init(Config *config, VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data, TextureData *texture_data, WindowData *window_data, Renderer *renderer, GeometryData *geometry_data) {
+void init(Config *config, BufferData *buffer_data, TextureData *texture_data, State *state, GeometryData *geometry_data) {
     setup_error_handling();
     log_info();
 
-    create_window(window_data);
+    create_window(&state->window_data);
 
-    init_vk(vk_core, config, window_data);
+    init_vk(config, state);
 
-    create_swapchain(vk_core, swp_ch, texture_data, window_data);
+    create_swapchain(texture_data, state);
 
-    create_renderer(vk_core, swp_ch, buffer_data, texture_data, renderer, geometry_data);
+    create_renderer(buffer_data, texture_data, geometry_data, state);
 }
 
-void loop(VkCore *vk_core,SwapchainData *swp_ch, BufferData *buffer_data, TextureData *texture_data, WindowData *window_data, Renderer *renderer, GeometryData *geometry_data, Config *config) {
-    while (!glfwWindowShouldClose(window_data->window)) {
+void loop(BufferData *buffer_data, TextureData *texture_data, State *state, GeometryData *geometry_data, Config *config) {
+    while (!glfwWindowShouldClose(state->window_data.window)) {
         glfwPollEvents();
         
-        uint32_t frame = renderer->current_frame;
+        uint32_t frame = state->renderer.current_frame;
 
-        vkWaitForFences(vk_core->device, 1, &renderer->in_flight_fence[frame], VK_TRUE, UINT64_MAX);
-        vkResetFences(vk_core->device, 1, &renderer->in_flight_fence[frame]);
+        vkWaitForFences(state->vk_core.device, 1, &state->renderer.in_flight_fence[frame], VK_TRUE, UINT64_MAX);
+        vkResetFences(state->vk_core.device, 1, &state->renderer.in_flight_fence[frame]);
 
-        acquire_next_swapchain_image(vk_core, swp_ch, texture_data, window_data, renderer);
-        record_command_buffer(swp_ch, buffer_data, config, renderer, geometry_data);
-        submit_command_buffer(vk_core, swp_ch, buffer_data, renderer);
-        present_swapchain_image(vk_core, swp_ch, texture_data, window_data, renderer);
+        acquire_next_swapchain_image(texture_data, state);
+        record_command_buffer(buffer_data, config, geometry_data, state);
+        submit_command_buffer(buffer_data, state);
+        present_swapchain_image(texture_data, state);
 
-        renderer->current_frame = (renderer->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;    
+        state->renderer.current_frame = (state->renderer.current_frame + 1) % MAX_FRAMES_IN_FLIGHT;    
     }
 }
 
-void cleanup(VkCore *vk_core, SwapchainData *swp_ch, BufferData *buffer_data, TextureData *texture_data, WindowData *window_data, Renderer *renderer) {
-    destroy_renderer(vk_core, swp_ch, renderer);
-    cleanup_swapchain(vk_core, swp_ch, texture_data);  
+void cleanup(BufferData *buffer_data, TextureData *texture_data, State *state) {
+    destroy_renderer(state);
+    cleanup_swapchain(texture_data, state);  
 
-    vkDestroySampler(vk_core->device, texture_data->texture_sampler, vk_core->allocator);
-    vkDestroyImageView(vk_core->device, texture_data->texture_image_view, vk_core->allocator);
-    vkDestroyImage(vk_core->device, texture_data->texture_image, vk_core->allocator);
-    vkFreeMemory(vk_core->device, texture_data->texture_image_memory, vk_core->allocator);
+    vkDestroySampler(state->vk_core.device, texture_data->texture_sampler, state->vk_core.allocator);
+    vkDestroyImageView(state->vk_core.device, texture_data->texture_image_view, state->vk_core.allocator);
+    vkDestroyImage(state->vk_core.device, texture_data->texture_image, state->vk_core.allocator);
+    vkFreeMemory(state->vk_core.device, texture_data->texture_image_memory, state->vk_core.allocator);
     
-    destroy_uniform_buffers(vk_core, buffer_data);
-    destroy_descriptor_sets(vk_core, renderer);
-    destroy_descriptor_set_layout(vk_core, renderer);
+    destroy_uniform_buffers(buffer_data, state);
+    destroy_descriptor_sets(state);
+    destroy_descriptor_set_layout(state);
 
-    destroy_index_buffer(vk_core, buffer_data);
-    destroy_vertex_buffer(vk_core, buffer_data);
+    destroy_index_buffer(buffer_data, state);
+    destroy_vertex_buffer(buffer_data, state);
 
-    if (vk_core->device != VK_NULL_HANDLE)
-        vkDestroyDevice(vk_core->device, vk_core->allocator);
+    if (state->vk_core.device != VK_NULL_HANDLE)
+        vkDestroyDevice(state->vk_core.device, state->vk_core.allocator);
 
-    if (vk_core->surface != VK_NULL_HANDLE)
-        vkDestroySurfaceKHR(vk_core->instance, vk_core->surface, vk_core->allocator);
+    if (state->vk_core.surface != VK_NULL_HANDLE)
+        vkDestroySurfaceKHR(state->vk_core.instance, state->vk_core.surface, state->vk_core.allocator);
 
-    if (window_data->window)
-        glfwDestroyWindow(window_data->window);
+    if (state->window_data.window)
+        glfwDestroyWindow(state->window_data.window);
 
-    if (vk_core->instance != VK_NULL_HANDLE)
-        vkDestroyInstance(vk_core->instance, vk_core->allocator);
+    if (state->vk_core.instance != VK_NULL_HANDLE)
+        vkDestroyInstance(state->vk_core.instance, state->vk_core.allocator);
 }
 
 int main(void) {
@@ -82,24 +82,25 @@ int main(void) {
         .background_color = (VkClearColorValue) {1.0f, 1.0f, 1.0f},
         .window_title = "Hello World",
     };
-    VkCore vk_core = {
-        .api_version = VK_API_VERSION_1_4,
+    State state = {
+        .window_data = {
+            .title = "Kuta",
+            .fullscreen = false,
+            .width = 1020,
+            .height = 720,
+        },
+        .vk_core = {
+            .api_version = VK_API_VERSION_1_4,
+        }
     };
-    SwapchainData swp_ch = {};
+
     BufferData buffer_data = {};
     TextureData texture_data = {};
-    WindowData window_data = {
-        .title = "Kuta",
-        .fullscreen = false,
-        .width = 1020,
-        .height = 720,
-    };
-    Renderer renderer = {};
     GeometryData geometry_data = {};
 
-    init(&config ,&vk_core, &swp_ch, &buffer_data, &texture_data, &window_data, &renderer, &geometry_data);
-    loop(&vk_core, &swp_ch, &buffer_data, &texture_data, &window_data, &renderer, &geometry_data, &config);
-    cleanup(&vk_core, &swp_ch, &buffer_data, &texture_data, &window_data, &renderer);
+    init(&config , &buffer_data, &texture_data, &state, &geometry_data);
+    loop(&buffer_data, &texture_data, &state, &geometry_data, &config);
+    cleanup(&buffer_data, &texture_data, &state);
 
     return EXIT_SUCCESS;
 }

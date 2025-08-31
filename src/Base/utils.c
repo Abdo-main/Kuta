@@ -17,16 +17,16 @@ uint32_t clamp(uint32_t value, uint32_t min, uint32_t max) {
     return value;
 }
 
-VkCommandBuffer begin_single_time_commands(VkCore *vk_core, Renderer *renderer) {
+VkCommandBuffer begin_single_time_commands(State *state) {
     VkCommandBufferAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandPool = renderer->command_pool,
+        .commandPool = state->renderer.command_pool,
         .commandBufferCount = 1,
     };
 
     VkCommandBuffer command_buffer;
-    vkAllocateCommandBuffers(vk_core->device, &alloc_info, &command_buffer);
+    vkAllocateCommandBuffers(state->vk_core.device, &alloc_info, &command_buffer);
 
     VkCommandBufferBeginInfo begin_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -37,7 +37,7 @@ VkCommandBuffer begin_single_time_commands(VkCore *vk_core, Renderer *renderer) 
     return command_buffer;
 }
 
-void end_single_time_commands(VkCommandBuffer command_buffer, VkCore *vk_core, Renderer *renderer) {
+void end_single_time_commands(VkCommandBuffer command_buffer, State *state) {
     vkEndCommandBuffer(command_buffer);
 
     VkSubmitInfo submit_info = {
@@ -46,13 +46,13 @@ void end_single_time_commands(VkCommandBuffer command_buffer, VkCore *vk_core, R
         .pCommandBuffers = &command_buffer,
     };
 
-    vkQueueSubmit(vk_core->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
-    vkQueueWaitIdle(vk_core->graphics_queue);
+    vkQueueSubmit(state->vk_core.graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(state->vk_core.graphics_queue);
 
-    vkFreeCommandBuffers(vk_core->device, renderer->command_pool, 1, &command_buffer);
+    vkFreeCommandBuffers(state->vk_core.device, state->renderer.command_pool, 1, &command_buffer);
 }
 
-VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspect_Flags, VkCore *vk_core) {
+VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspect_Flags, State *state) {
     VkImageViewCreateInfo view_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
@@ -66,7 +66,7 @@ VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags
     };
 
     VkImageView image_view;
-    EXPECT(vkCreateImageView(vk_core->device, &view_info, vk_core->allocator, &image_view), "Failed to create texture image view")
+    EXPECT(vkCreateImageView(state->vk_core.device, &view_info, state->vk_core.allocator, &image_view), "Failed to create texture image view")
 
     return image_view;
 }
