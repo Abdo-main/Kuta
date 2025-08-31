@@ -10,26 +10,25 @@
 #include "vertex_data.h"
 
 
-void acquire_next_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
-    Renderer* renderer = &state->renderer;
+void acquire_next_swapchain_image(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data, WindowData *window_data, Renderer *renderer) {
     uint32_t image_index;
     VkResult result = vkAcquireNextImageKHR(
         vk_core->device,
-        swp_ch->swapchain, UINT64_MAX, renderer->acquired_image_semaphore[state->current_frame],
+        swp_ch->swapchain, UINT64_MAX, renderer->acquired_image_semaphore[renderer->current_frame],
         VK_NULL_HANDLE,
         &image_index
     );
     swp_ch->acquired_image_index = image_index;
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreate_swapchain(state, vk_core, swp_ch, texture_data);
+        recreate_swapchain(vk_core, swp_ch, texture_data, window_data, renderer);
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         EXPECT(2, "failed to acquire swap chain image!");
     }
 }
 
-void present_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
+void present_swapchain_image(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data, WindowData *window_data, Renderer *renderer) {
     uint32_t image_index = swp_ch->acquired_image_index;
     VkPresentInfoKHR present_info = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -37,19 +36,19 @@ void present_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_c
         .pSwapchains = &swp_ch->swapchain,
         .pImageIndices = &swp_ch->acquired_image_index,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &state->renderer.finished_render_semaphore[image_index],
+        .pWaitSemaphores = &renderer->finished_render_semaphore[image_index],
     };
     
     VkResult result = vkQueuePresentKHR(vk_core->graphics_queue, &present_info);
     
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        recreate_swapchain(state, vk_core, swp_ch, texture_data);
+        recreate_swapchain(vk_core, swp_ch, texture_data, window_data, renderer);
     } else if (result != VK_SUCCESS) {
         EXPECT(2, "Couldn't present swapchain image %i", swp_ch->acquired_image_index);
     }
 }
 
-void cleanup_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
+void cleanup_swapchain(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
     vkDestroyImageView(vk_core->device, texture_data->depth_image_view, vk_core->allocator);
     vkDestroyImage(vk_core->device, texture_data->depth_image, vk_core->allocator);
     vkFreeMemory(vk_core->device, texture_data->depth_image_memory, vk_core->allocator);
@@ -145,7 +144,7 @@ VkExtent2D choose_extent(GLFWwindow *window, VkSurfaceCapabilitiesKHR capabiliti
     return extent;
 }
 
-void get_swapchain_images_and_create_image_views(State *state, VkSurfaceFormatKHR format, VkCore *vk_core, SwapchainData *swp_ch) {
+void get_swapchain_images_and_create_image_views(VkSurfaceFormatKHR format, VkCore *vk_core, SwapchainData *swp_ch) {
     // Query the number of images in the new swapchain
     EXPECT(vkGetSwapchainImagesKHR(vk_core->device, swp_ch->swapchain, &swp_ch->image_count, NULL), "Failed to get swap chain images count")
     // Allocate based on the number of images in the new swapchain
@@ -175,7 +174,7 @@ void get_swapchain_images_and_create_image_views(State *state, VkSurfaceFormatKH
     }
 }
 
-void create_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
+void create_swapchain(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data, WindowData *window_data) {
     // Query the surface capabilities for the current physical device and surface
     VkSurfaceCapabilitiesKHR capabilities = get_capabilities(&vk_core->physical_device, &vk_core->surface);
     
@@ -186,9 +185,9 @@ void create_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, Text
 
     swp_ch->image_format = format.format;
     // choose_extent
-    swp_ch->extent = choose_extent(state->window, capabilities);
+    swp_ch->extent = choose_extent(window_data->window, capabilities);
 
-    cleanup_swapchain(state, vk_core, swp_ch, texture_data);
+    cleanup_swapchain(vk_core, swp_ch, texture_data);
 
     // Create the swapchain with the chosen parameters
     EXPECT(vkCreateSwapchainKHR(vk_core->device, &(VkSwapchainCreateInfoKHR){
@@ -210,21 +209,21 @@ void create_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, Text
         .minImageCount = clamp(3, capabilities.minImageCount, capabilities.maxImageCount ? capabilities.maxImageCount : UINT32_MAX),
     }, vk_core->allocator, &swp_ch->swapchain), "Failed to create swap chain")
 
-   get_swapchain_images_and_create_image_views(state, format, vk_core, swp_ch);
+   get_swapchain_images_and_create_image_views(format, vk_core, swp_ch);
 }
 
-void recreate_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data) {
+void recreate_swapchain(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data, WindowData *window_data, Renderer *renderer) {
     int width = 0, height = 0;
     while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(state->window, &width, &height);
+        glfwGetFramebufferSize(window_data->window, &width, &height);
         glfwWaitEvents();
     }
     vkDeviceWaitIdle(vk_core->device);
 
-    destroy_frame_buffers(state, vk_core, swp_ch);
-    cleanup_swapchain(state, vk_core, swp_ch, texture_data);
+    destroy_frame_buffers(vk_core, swp_ch, renderer);
+    cleanup_swapchain(vk_core, swp_ch, texture_data);
 
-    create_swapchain(state, vk_core, swp_ch, texture_data);
-    create_depth_resources(state, vk_core, swp_ch, texture_data);
-    create_frame_buffers(state, vk_core, swp_ch, texture_data);
+    create_swapchain(vk_core, swp_ch, texture_data, window_data);
+    create_depth_resources(vk_core, swp_ch, texture_data, renderer);
+    create_frame_buffers(vk_core, swp_ch, texture_data, renderer);
 }

@@ -10,7 +10,7 @@
 #include "vertex_data.h"
 #include "textures.h"
 
-void create_image(State *state, uint32_t width, uint32_t height,
+void create_image(uint32_t width, uint32_t height,
                   VkFormat format, VkImageTiling tiling,
                   VkImageUsageFlags usage,
                   VkMemoryPropertyFlags properties,
@@ -43,14 +43,14 @@ void create_image(State *state, uint32_t width, uint32_t height,
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = mem_requirements.size,
-        .memoryTypeIndex = find_memory_type(state, mem_requirements.memoryTypeBits, properties, vk_core),
+        .memoryTypeIndex = find_memory_type(mem_requirements.memoryTypeBits, properties, vk_core),
     };
 
     EXPECT(vkAllocateMemory(vk_core->device, &alloc_info, vk_core->allocator, image_memory), "Failed to allocate memmory for image")
     vkBindImageMemory(vk_core->device, *image, *image_memory, 0);
 }
 
-void create_texture_image(State *state, char* filename, VkCore *vk_core, TextureData *texture_data) {
+void create_texture_image(char* filename, VkCore *vk_core, TextureData *texture_data, Renderer *renderer) {
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memmory;
 
@@ -60,7 +60,7 @@ void create_texture_image(State *state, char* filename, VkCore *vk_core, Texture
 
     EXPECT(!pixels, "Failed to load texture image!")
 
-    create_buffer(state, image_size,
+    create_buffer(image_size,
                   VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                   &staging_buffer, &staging_buffer_memmory, vk_core);
 
@@ -71,7 +71,7 @@ void create_texture_image(State *state, char* filename, VkCore *vk_core, Texture
 
     stbi_image_free(pixels);
 
-    create_image(state, tex_width, tex_height, 
+    create_image(tex_width, tex_height, 
                  VK_FORMAT_R8G8B8A8_SRGB,
                  VK_IMAGE_TILING_OPTIMAL,
                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -80,17 +80,17 @@ void create_texture_image(State *state, char* filename, VkCore *vk_core, Texture
                  &texture_data->texture_image_memory,
                  vk_core);
 
-    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, state, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk_core);
-    copy_buffer_to_image(state, staging_buffer, texture_data->texture_image, (uint32_t)tex_width, (uint32_t)tex_height, vk_core);
-    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, state, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vk_core);
+    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vk_core, renderer);
+    copy_buffer_to_image(staging_buffer, texture_data->texture_image, (uint32_t)tex_width, (uint32_t)tex_height, vk_core, renderer);
+    transition_image_layout(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, vk_core, renderer);
     // CLEANUP
     vkDestroyBuffer(vk_core->device, staging_buffer, vk_core->allocator);
     vkFreeMemory(vk_core->device, staging_buffer_memmory, vk_core->allocator);
 
 }
 
-void transition_image_layout(VkImage image, VkFormat format, State *state, VkImageLayout old_layout, VkImageLayout new_layout, VkCore *vk_core) {
-    VkCommandBuffer command_buffer = begin_single_time_commands(state, vk_core);
+void transition_image_layout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout, VkCore *vk_core, Renderer *renderer) {
+    VkCommandBuffer command_buffer = begin_single_time_commands(vk_core, renderer);
 
 
     VkImageMemoryBarrier barrier = {
@@ -152,11 +152,11 @@ void transition_image_layout(VkImage image, VkFormat format, State *state, VkIma
     );
     
 
-    end_single_time_commands(state, command_buffer, vk_core);
+    end_single_time_commands(command_buffer, vk_core, renderer);
 }
 
-void copy_buffer_to_image(State *state, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, VkCore *vk_core) {
-    VkCommandBuffer command_buffer = begin_single_time_commands(state, vk_core);
+void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, VkCore *vk_core, Renderer *renderer) {
+    VkCommandBuffer command_buffer = begin_single_time_commands(vk_core, renderer);
     
     VkBufferImageCopy region = {
         .bufferOffset = 0,
@@ -183,14 +183,14 @@ void copy_buffer_to_image(State *state, VkBuffer buffer, VkImage image, uint32_t
         &region
     );
 
-    end_single_time_commands(state, command_buffer, vk_core);
+    end_single_time_commands(command_buffer, vk_core, renderer);
 }
 
-void create_texture_image_view(State *state, VkCore *vk_core, TextureData *texture_data) {
-    texture_data->texture_image_view = create_image_view(state, texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, vk_core);
+void create_texture_image_view(VkCore *vk_core, TextureData *texture_data) {
+    texture_data->texture_image_view = create_image_view(texture_data->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, vk_core);
 }
 
-void create_texture_sampler(State *state, VkCore *vk_core, TextureData *texture_data) {
+void create_texture_sampler(VkCore *vk_core, TextureData *texture_data) {
     VkPhysicalDeviceProperties properties = {};
     vkGetPhysicalDeviceProperties(vk_core->physical_device, &properties);
 

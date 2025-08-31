@@ -9,13 +9,13 @@
 #include "main.h"
 #include "utils.h"
 
-void create_instance(VkCore *vk_core, State *state) {
+void create_instance(VkCore *vk_core, Config *config) {
     uint32_t required_extensions_count; 
     const char **required_extensions = glfwGetRequiredInstanceExtensions(&required_extensions_count);
     VkApplicationInfo appInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pApplicationName = state->application_name,
-        .pEngineName = state->engine_name,
+        .pApplicationName = config->application_name,
+        .pEngineName = config->engine_name,
         .apiVersion = vk_core->api_version,
     };
     VkInstanceCreateInfo createInfo = {
@@ -30,7 +30,6 @@ void create_instance(VkCore *vk_core, State *state) {
 
 void select_physical_device(VkCore *vk_core) {
     uint32_t count;
-
     EXPECT(vkEnumeratePhysicalDevices(vk_core->instance, &count, NULL), "Failed to enumerate physical devices count1")
     EXPECT(count == 0, "Failed to find vulkan supported physical device")
 
@@ -42,8 +41,8 @@ void select_physical_device(VkCore *vk_core) {
     vk_core->physical_device = devices[0];
 }
 
-void create_surface(VkCore *vk_core, State *state) {
-    EXPECT(glfwCreateWindowSurface(vk_core->instance, state->window, vk_core->allocator, &vk_core->surface), "Failed to create window surface")
+void create_surface(VkCore *vk_core, WindowData *window_data) {
+    EXPECT(glfwCreateWindowSurface(vk_core->instance, window_data->window, vk_core->allocator, &vk_core->surface), "Failed to create window surface")
 }
 
 void select_queue_family(VkCore *vk_core) {
@@ -94,10 +93,10 @@ void get_queue(VkCore *vk_core) {
     vkGetDeviceQueue(vk_core->device, vk_core->graphics_queue_family, 0, &vk_core->graphics_queue);
 }
 
-void init_vk(VkCore *vk_core, State *state) {
-    create_instance(vk_core, state);
+void init_vk(VkCore *vk_core, Config *config, WindowData *window_data) {
+    create_instance(vk_core, config);
     select_physical_device(vk_core);
-    create_surface(vk_core, state);
+    create_surface(vk_core, window_data);
     select_queue_family(vk_core);
     create_device(vk_core);
     get_queue(vk_core);

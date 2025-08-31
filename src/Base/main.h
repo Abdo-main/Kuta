@@ -64,6 +64,21 @@ typedef struct {
 } TextureData;
 
 typedef struct {
+    GLFWwindow* window;
+    GLFWmonitor *monitor;
+    const char* title;
+    int width, height;
+    bool fullscreen;
+} WindowData;
+
+typedef struct {
+    Vertex* vertices;
+    uint32_t* indices;
+    size_t vertex_count;
+    size_t index_count;
+} GeometryData;
+
+typedef struct {
     VkPipeline graphics_pipeline;
     VkPipelineLayout pipeline_layout;
     VkRenderPass render_pass;
@@ -77,38 +92,13 @@ typedef struct {
     VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorSet* descriptor_sets;
     uint32_t descriptor_set_count;
+    uint32_t current_frame;
     
 } Renderer;
 
-typedef struct State {
+typedef struct {
     const char *window_title;
     const char *application_name;
     const char *engine_name;
-
-
-    int window_width, window_height;
-
-    bool window_fullscreen;
-
-    GLFWwindow *window;
-    GLFWmonitor *windowMonitor;
-
-    Renderer renderer;
-
-
-
-
-    uint32_t current_frame;
-
-
-
-    Vertex* vertices;
-    uint32_t* indices;
-    size_t vertex_count;
-    size_t index_count;
-
-
-
     VkClearColorValue background_color;
-
-} State;
+} Config;

@@ -17,11 +17,11 @@ uint32_t clamp(uint32_t value, uint32_t min, uint32_t max) {
     return value;
 }
 
-VkCommandBuffer begin_single_time_commands(State *state, VkCore *vk_core) {
+VkCommandBuffer begin_single_time_commands(VkCore *vk_core, Renderer *renderer) {
     VkCommandBufferAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandPool = state->renderer.command_pool,
+        .commandPool = renderer->command_pool,
         .commandBufferCount = 1,
     };
 
@@ -37,7 +37,7 @@ VkCommandBuffer begin_single_time_commands(State *state, VkCore *vk_core) {
     return command_buffer;
 }
 
-void end_single_time_commands(State *state, VkCommandBuffer command_buffer, VkCore *vk_core) {
+void end_single_time_commands(VkCommandBuffer command_buffer, VkCore *vk_core, Renderer *renderer) {
     vkEndCommandBuffer(command_buffer);
 
     VkSubmitInfo submit_info = {
@@ -49,10 +49,10 @@ void end_single_time_commands(State *state, VkCommandBuffer command_buffer, VkCo
     vkQueueSubmit(vk_core->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
     vkQueueWaitIdle(vk_core->graphics_queue);
 
-    vkFreeCommandBuffers(vk_core->device, state->renderer.command_pool, 1, &command_buffer);
+    vkFreeCommandBuffers(vk_core->device, renderer->command_pool, 1, &command_buffer);
 }
 
-VkImageView create_image_view(State *state, VkImage image, VkFormat format, VkImageAspectFlags aspect_Flags, VkCore *vk_core) {
+VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspect_Flags, VkCore *vk_core) {
     VkImageViewCreateInfo view_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,

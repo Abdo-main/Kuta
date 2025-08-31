@@ -4,9 +4,9 @@
 #include "main.h"
 
 uint32_t clamp(uint32_t value, uint32_t min, uint32_t max);
-void recreate_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data);
-void acquire_next_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data);
-void present_swapchain_image(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data);
-void create_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data);
-void cleanup_swapchain(State *state, VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data);
+void recreate_swapchain(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data, WindowData *window_data, Renderer *renderer);
+void acquire_next_swapchain_image(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data, WindowData *window_data, Renderer *renderer);
+void present_swapchain_image(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data, WindowData *window_data, Renderer *renderer);
+void create_swapchain(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data, WindowData *window_data);
+void cleanup_swapchain(VkCore *vk_core, SwapchainData *swp_ch, TextureData *texture_data);
 

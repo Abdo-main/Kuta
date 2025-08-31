@@ -3,7 +3,7 @@
 #include <assimp/postprocess.h>
 #include "main.h"
 
-void load_model(State *state, const char* filename) {
+void load_model(const char* filename, GeometryData *geometry_data) {
     printf("Loading GLB model: %s\n", filename);
     
     const struct aiScene* scene = aiImportFile(filename, 
@@ -35,22 +35,22 @@ void load_model(State *state, const char* filename) {
     printf("Total unique vertices: %zu, total indices: %zu\n", total_vertices, total_indices);
     
     // Allocate memory
-    state->vertices = malloc(sizeof(Vertex) * total_vertices);
-    state->indices = malloc(sizeof(uint32_t) * total_indices);
+    geometry_data->vertices = malloc(sizeof(Vertex) * total_vertices);
+    geometry_data->indices = malloc(sizeof(uint32_t) * total_indices);
     
-    if (!state->vertices || !state->indices) {
+    if (!geometry_data->vertices || !geometry_data->indices) {
         printf("Memory allocation failed!\n");
         aiReleaseImport(scene);
         return;
     }
     
-    state->vertex_count = 0;
-    state->index_count = 0;
+    geometry_data->vertex_count = 0;
+    geometry_data->index_count = 0;
     
     // Process each mesh
     for (unsigned int m = 0; m < scene->mNumMeshes; m++) {
         struct aiMesh* mesh = scene->mMeshes[m];
-        size_t vertex_offset = state->vertex_count; // Offset for this mesh's vertices
+        size_t vertex_offset = geometry_data->vertex_count; // Offset for this mesh's vertices
         
         printf("Processing mesh %u: %u vertices, %u faces\n", 
                m, mesh->mNumVertices, mesh->mNumFaces);
@@ -84,7 +84,7 @@ void load_model(State *state, const char* filename) {
                 vertex.color[2] = 1.0f;
             }
             
-            state->vertices[state->vertex_count++] = vertex;
+            geometry_data->vertices[geometry_data->vertex_count++] = vertex;
         }
         
         // Process indices - this is where the magic happens!
@@ -96,7 +96,7 @@ void load_model(State *state, const char* filename) {
                     // Key difference: indices point to the unique vertices we just stored
                     // face.mIndices[i] is the index WITHIN THIS MESH
                     // vertex_offset is the starting point of this mesh's vertices in our big array
-                    state->indices[state->index_count++] = face.mIndices[i] + vertex_offset;
+                    geometry_data->indices[geometry_data->index_count++] = face.mIndices[i] + vertex_offset;
                 }
             } else {
                 printf("Warning: Face with %u indices found\n", face.mNumIndices);
@@ -105,9 +105,9 @@ void load_model(State *state, const char* filename) {
     }
     
     printf("Successfully loaded GLB model with PROPER indexing:\n");
-    printf("  - Unique vertices: %zu\n", state->vertex_count);
-    printf("  - Indices: %zu\n", state->index_count);
-    printf("  - Vertex reuse ratio: %.1f:1\n", (float)state->index_count / state->vertex_count);
+    printf("  - Unique vertices: %zu\n", geometry_data->vertex_count);
+    printf("  - Indices: %zu\n", geometry_data->index_count);
+    printf("  - Vertex reuse ratio: %.1f:1\n", (float)geometry_data->index_count / geometry_data->vertex_count);
    
     aiReleaseImport(scene);
 }

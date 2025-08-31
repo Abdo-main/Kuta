@@ -4,4 +4,5 @@
 
 #include "main.h"
 
-void create_window(State *state);
+void create_window(WindowData *window_data);
+
