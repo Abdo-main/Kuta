@@ -2,9 +2,9 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
 #include <stdbool.h>
-#include <stdlib.h>
 
 #include "main.h"
+#include "camera.h"
 #include "window.h"
 #include "swapchain.h"
 #include "vulkan_core.h"
@@ -20,8 +20,20 @@ void init(Config *config, BufferData *buffer_data, TextureData *texture_data, St
     log_info();
 
     create_window(&state->window_data);
+    // Set the state as window user pointer so callbacks can access it
+    glfwSetWindowUserPointer(state->window_data.window, state);
 
-    init_vk(config, state);
+    // Initialize input state
+    state->input_state.firstMouse = true;
+    state->input_state.lastX = state->window_data.width / 2.0f;
+    state->input_state.lastY = state->window_data.height / 2.0f;
+
+    // Set callbacks
+    glfwSetKeyCallback(state->window_data.window, key_callback);
+    glfwSetCursorPosCallback(state->window_data.window, mouse_callback);
+    glfwSetInputMode(state->window_data.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    camera_init(&state->input_state.camera);    init_vk(config, state);
 
     create_swapchain(texture_data, state);
 
@@ -29,11 +41,18 @@ void init(Config *config, BufferData *buffer_data, TextureData *texture_data, St
 }
 
 void loop(BufferData *buffer_data, TextureData *texture_data, State *state, GeometryData *geometry_data, Config *config) {
-    while (!glfwWindowShouldClose(state->window_data.window)) {
-        glfwPollEvents();
-        
-        uint32_t frame = state->renderer.current_frame;
 
+    float lastFrame = 0.0f;
+    while (!glfwWindowShouldClose(state->window_data.window)) {
+        float currentFrame = glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;  
+
+        glfwPollEvents();
+
+        process_input(state, deltaTime);
+
+        uint32_t frame = state->renderer.current_frame;
         vkWaitForFences(state->vk_core.device, 1, &state->renderer.in_flight_fence[frame], VK_TRUE, UINT64_MAX);
         vkResetFences(state->vk_core.device, 1, &state->renderer.in_flight_fence[frame]);
 

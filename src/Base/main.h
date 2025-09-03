@@ -28,8 +28,7 @@ typedef struct {
 typedef struct {
     VkSwapchainKHR swapchain;
     VkImage* images;
-    VkImageView* image_views;
-    VkFormat image_format;
+    VkImageView* image_views; VkFormat image_format;
     VkExtent2D extent;
     uint32_t image_count;
     uint32_t acquired_image_index;
@@ -104,8 +103,33 @@ typedef struct {
 } Config;
 
 typedef struct {
+    vec3 position;
+    vec3 front;
+    vec3 up;
+    vec3 right;
+    vec3 worldUp;
+    
+    float yaw;
+    float pitch;
+    
+    float movementSpeed;
+    float mouseSensitivity;
+    
+    mat4 viewMatrix;
+} Camera;
+
+typedef struct {
+    bool keys[GLFW_KEY_LAST];
+    bool firstMouse;
+    float lastX, lastY;
+    Camera camera;
+} InputState;
+
+typedef struct {
     Renderer renderer;
     SwapchainData swp_ch;
     VkCore vk_core;
     WindowData window_data;
+    InputState input_state;
 } State;
+

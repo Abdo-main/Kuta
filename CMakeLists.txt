@@ -35,6 +35,7 @@ add_executable(kuta
     ${SRC_DIR}/descriptors.c
     ${SRC_DIR}/textures.c
     ${SRC_DIR}/models.c
+    ${SRC_DIR}/camera.c
 )
 
 # Platform-specific settings

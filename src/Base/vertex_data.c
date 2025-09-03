@@ -17,6 +17,7 @@
 #include "utils.h"
 #include "descriptors.h"
 #include "utils.h"
+#include "camera.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -171,9 +172,8 @@ void destroy_index_buffer(BufferData *buffer_data, State *state){
 }
 
 void create_uniform_buffers(State *state, BufferData *buffer_data) {
-    VkDeviceSize buffer_size = sizeof(UBO); // Assuming you have a ubo struct
+    VkDeviceSize buffer_size = sizeof(UBO);
 
-    // In C, we use arrays instead of vectors - make sure your struct has these arrays:
     for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         create_buffer(buffer_size, 
                      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
@@ -219,8 +219,8 @@ void update_uniform_buffer(uint32_t current_image, State *state, BufferData *buf
     glm_mat4_identity(model);
 
   // Rotate 90 degrees around X-axis
-    vec3 ax = {1.0f, 0.0f, 0.0f}; // Rotate around X-axis
-    float ang = glm_rad(90.0f);   // -90 degrees to make it stand up
+    vec3 ax = {1.0f, 0.0f, 0.0f};
+    float ang = glm_rad(90.0f); 
     glm_rotate(model, ang, ax);
 
     // Scale down the model (adjust this value as needed)
@@ -232,20 +232,16 @@ void update_uniform_buffer(uint32_t current_image, State *state, BufferData *buf
     glm_rotate(model, angle, axis);
     glm_mat4_copy(model, ubo.model);
     
-    // Create view matrix (lookAt)
     mat4 view;
-    vec3 eye = {2.0f, 2.0f, 2.0f};
-    vec3 center = {0.0f, 0.0f, 0.0f};
-    vec3 up = {0.0f, 0.0f, 1.0f};
-    glm_lookat(eye, center, up, view);
-    glm_mat4_copy(view, ubo.view);
-    
+    camera_get_view_matrix(&state->input_state.camera, view);  // Assuming you add camera to your State struct
+    glm_mat4_copy(view, ubo.view);   
+
     // Create projection matrix
     mat4 proj;
     glm_perspective(glm_rad(45.0f), 
                    state->swp_ch.extent.width / (float)state->swp_ch.extent.height,
                    0.1f, 10.0f, proj);
-    proj[1][1] *= -1; // Flip Y axis for Vulkan (GLM doesn't do this automatically in cglm)
+    proj[1][1] *= -1; 
     glm_mat4_copy(proj, ubo.proj);
     
     // Copy to mapped uniform buffer
