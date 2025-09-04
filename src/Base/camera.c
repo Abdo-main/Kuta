@@ -23,8 +23,8 @@ void camera_init(Camera* camera) {
     glm_vec3_copy((vec3){0.0f, 1.0f, 0.0f}, camera->worldUp);
     camera->yaw = -90.0f;
     camera->pitch = 0.0f;
-    camera->movementSpeed = 2.5f;
-    camera->mouseSensitivity = 0.05f;
+    camera->movementSpeed = 5.0f;
+    camera->mouseSensitivity = 0.1f;
     
     camera_update_vectors(camera);
 }

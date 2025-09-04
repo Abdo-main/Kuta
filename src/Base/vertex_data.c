@@ -218,11 +218,6 @@ void update_uniform_buffer(uint32_t current_image, State *state, BufferData *buf
     mat4 model;
     glm_mat4_identity(model);
 
-  // Rotate 90 degrees around X-axis
-    vec3 ax = {1.0f, 0.0f, 0.0f};
-    float ang = glm_rad(90.0f); 
-    glm_rotate(model, ang, ax);
-
     // Scale down the model (adjust this value as needed)
     vec3 scale = {0.01f, 0.01f, 0.01f}; // Scale to 10% of original size
     glm_scale(model, scale);
