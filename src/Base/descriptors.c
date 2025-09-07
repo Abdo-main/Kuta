@@ -64,7 +64,7 @@ void create_descriptor_pool(State *state) {
 
 void create_descriptor_sets(BufferData *buffer_data, Models *models, State *state) {
     // Create descriptor sets for each frame AND each model
-    size_t total_sets = MAX_FRAMES_IN_FLIGHT * 2;
+    size_t total_sets = MAX_FRAMES_IN_FLIGHT * models->model_count;
     
     VkDescriptorSetLayout* layouts = malloc(sizeof(VkDescriptorSetLayout) * total_sets);
     for (size_t i = 0; i < total_sets; i++) {
@@ -85,8 +85,8 @@ void create_descriptor_sets(BufferData *buffer_data, Models *models, State *stat
     
     // Update descriptor sets for each frame-model combination
     for (size_t frame = 0; frame < MAX_FRAMES_IN_FLIGHT; frame++) {
-        for (size_t model = 0; model < 2; model++) {
-            size_t set_index = frame * 2 + model;
+        for (size_t model = 0; model < models->model_count; model++) {
+            size_t set_index = frame * models->model_count + model;
             
             VkDescriptorBufferInfo buffer_info = {
                 .buffer = buffer_data->uniform_buffers[frame],

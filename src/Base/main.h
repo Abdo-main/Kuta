@@ -78,6 +78,10 @@ typedef struct {
     VkDeviceMemory* vertex_buffer_memory;
     VkBuffer* index_buffers;
     VkDeviceMemory* index_buffer_memory;
+
+    size_t model_count;
+    const char** model_files;
+    const char** texture_files;
 } Models;
 
 typedef struct {

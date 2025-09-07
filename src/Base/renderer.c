@@ -440,32 +440,23 @@ void submit_command_buffer(BufferData *buffer_data, State *state) {
     }, state->renderer.in_flight_fence[frame]), "Couldn't submit command buffer");
 }
 
-const char* MODEL_FILES[2] = {
-    "./models/twitch.glb",
-    "./models/t1_yone.glb",
-};
-
-size_t model_count = 2;
-const char* TEXTURE_FILES[2] = {
-    "./textures/pasted__twitch.png",
-    "./textures/Body.png",
-};
-
-void create_renderer(BufferData *buffer_data,  Models *models, State *state){
-    models->geometry = malloc(sizeof(GeometryData) * model_count);
-    models->texture = malloc(sizeof(TextureData) * model_count);
+void alloc_model_data(Models *models){
+    models->geometry = malloc(sizeof(GeometryData) * models->model_count);
+    models->texture = malloc(sizeof(TextureData) * models->model_count);
     
     // Initialize texture data to zero to avoid garbage values
-    memset(models->texture, 0, sizeof(TextureData) * model_count);
-    memset(models->geometry, 0, sizeof(GeometryData) * model_count);
+    memset(models->texture, 0, sizeof(TextureData) * models->model_count);
+    memset(models->geometry, 0, sizeof(GeometryData) * models->model_count);
     
     // THEN: Allocate the buffer pointer arrays
-    models->vertex_buffers = malloc(sizeof(VkBuffer) * model_count);
-    models->vertex_buffer_memory = malloc(sizeof(VkDeviceMemory) * model_count);
-    models->index_buffers = malloc(sizeof(VkBuffer) * model_count);
-    models->index_buffer_memory = malloc(sizeof(VkDeviceMemory) * model_count);
-     
-    
+    models->vertex_buffers = malloc(sizeof(VkBuffer) * models->model_count);
+    models->vertex_buffer_memory = malloc(sizeof(VkDeviceMemory) * models->model_count);
+    models->index_buffers = malloc(sizeof(VkBuffer) * models->model_count);
+    models->index_buffer_memory = malloc(sizeof(VkDeviceMemory) * models->model_count);
+}
+
+void create_renderer(BufferData *buffer_data,  Models *models, State *state){
+    alloc_model_data(models);
     create_render_pass(state);
     create_descriptor_set_layout(state);
     create_graphics_pipeline(state);
@@ -473,12 +464,12 @@ void create_renderer(BufferData *buffer_data,  Models *models, State *state){
     create_depth_resources(state);
     create_frame_buffers(state);
     for (size_t i = 0; i < 2; i++) {
-        create_texture_image(TEXTURE_FILES, models, state, i);
+        create_texture_image(models->texture_files, models, state, i);
         create_texture_image_view(state, models, i);
         create_texture_sampler(state, models, i);
     }
     
-    load_models(MODEL_FILES, models, model_count, buffer_data, state);
+    load_models(models->model_files, models, models->model_count, buffer_data, state);
     create_descriptor_pool(state);
     create_uniform_buffers(state,buffer_data);
     create_descriptor_sets(buffer_data, models, state);

@@ -5,121 +5,56 @@
 #include <stdbool.h>
 
 #include "main.h"
-#include "camera.h"
-#include "window.h"
-#include "swapchain.h"
-#include "vulkan_core.h"
-#include "renderer.h"
-#include "utils.h"
-#include "vertex_data.h"
-#include "descriptors.h"
+#include "kuta.h"
 
-
-
-void init(Config *config, BufferData *buffer_data, Models *models, State *state) {
-    setup_error_handling();
-    log_info();
-
-    create_window(&state->window_data);
-    // Set the state as window user pointer so callbacks can access it
-    glfwSetWindowUserPointer(state->window_data.window, state);
-
-    // Initialize input state
-    state->input_state.firstMouse = true;
-    state->input_state.lastX = state->window_data.width / 2.0f;
-    state->input_state.lastY = state->window_data.height / 2.0f;
-
-    // Set callbacks
-    glfwSetKeyCallback(state->window_data.window, key_callback);
-    glfwSetCursorPosCallback(state->window_data.window, mouse_callback);
-    glfwSetInputMode(state->window_data.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    camera_init(&state->input_state.camera);    init_vk(config, state);
-
-    create_swapchain(state);
-
-    create_renderer(buffer_data, models, state);
-}
-
-void loop(BufferData *buffer_data, Models *models, State *state, Config *config) {
-
-    float lastFrame = 0.0f;
-    while (!glfwWindowShouldClose(state->window_data.window)) {
-        float currentFrame = glfwGetTime();
-        float deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;  
-
-        glfwPollEvents();
-
-        process_input(state, deltaTime);
-
-        uint32_t frame = state->renderer.current_frame;
-        vkWaitForFences(state->vk_core.device, 1, &state->renderer.in_flight_fence[frame], VK_TRUE, UINT64_MAX);
-        vkResetFences(state->vk_core.device, 1, &state->renderer.in_flight_fence[frame]);
-
-        acquire_next_swapchain_image(state);
-        record_command_buffer(buffer_data, config, models, state);
-        submit_command_buffer(buffer_data, state);
-        present_swapchain_image(models, state);
-
-        state->renderer.current_frame = (state->renderer.current_frame + 1) % MAX_FRAMES_IN_FLIGHT;    
-    }
-}
-
-void cleanup(BufferData *buffer_data, Models *models, State *state) {
-    destroy_renderer(state);
-    cleanup_swapchain(state);  
-    for (size_t i = 0; i < 2; i++) {
-        vkDestroySampler(state->vk_core.device, models->texture[i].texture_sampler, state->vk_core.allocator);
-        vkDestroyImageView(state->vk_core.device, models->texture[i].texture_image_view, state->vk_core.allocator);
-        vkDestroyImage(state->vk_core.device, models->texture[i].texture_image, state->vk_core.allocator);
-        vkFreeMemory(state->vk_core.device, models->texture[i].texture_image_memory, state->vk_core.allocator);
-    }
-    destroy_uniform_buffers(buffer_data, state);
-    destroy_descriptor_sets(state);
-    destroy_descriptor_set_layout(state);
-    for (size_t i = 0; i < 2; i++) {
-        destroy_index_buffers(models, state, i);
-        destroy_vertex_buffers(models, state, i);
-    }    
-    if (state->vk_core.device != VK_NULL_HANDLE)
-        vkDestroyDevice(state->vk_core.device, state->vk_core.allocator);
-
-    if (state->vk_core.surface != VK_NULL_HANDLE)
-        vkDestroySurfaceKHR(state->vk_core.instance, state->vk_core.surface, state->vk_core.allocator);
-
-    if (state->window_data.window)
-        glfwDestroyWindow(state->window_data.window);
-
-    if (state->vk_core.instance != VK_NULL_HANDLE)
-        vkDestroyInstance(state->vk_core.instance, state->vk_core.allocator);
-}
+#define MODELS_COUNT 2
+#define TEXTURE_COUNT 2
 
 int main(void) {
-    Config config = {
-        .application_name = "Kuta",
-        .engine_name = "Kuta",
-        .background_color = (VkClearColorValue) {1.0f, 1.0f, 1.0f},
-        .window_title = "Hello World",
+    const char* models_files[MODELS_COUNT] = {
+        "./models/twitch.glb",
+        "./models/t1_yone.glb",
     };
+
+    const char* texture_files[TEXTURE_COUNT] = {
+        "./textures/pasted__twitch.png",
+        "./textures/Body.png",
+    }; 
+
+    Models models = {
+        .model_count = MODELS_COUNT,
+        .model_files = models_files,
+        .texture_files = texture_files,
+    };
+
     State state = {
         .window_data = {
-            .title = "Kuta",
             .fullscreen = false,
-            .width = 1020,
-            .height = 720,
+            .width = 800,
+            .height = 600,
+            .title = "Hello Library",
         },
         .vk_core = {
             .api_version = VK_API_VERSION_1_4,
         }
     };
 
-    BufferData buffer_data = {};
-    Models models = {};
- 
-    init(&config , &buffer_data, &models, &state);
-    loop(&buffer_data, &models, &state, &config);
-    cleanup(&buffer_data, &models, &state);
+    Config config = {
+        .application_name = "Kudo",
+        .engine_name = "Kuta",
+        .background_color = (VkClearColorValue) {1.0f, 1.0f, 1.0f},
+        .window_title = "Hello, World!!!",
+    };
 
+    BufferData buffer_data = {};
+
+    kuta_init(&models, &state, &config, &buffer_data);
+
+    while (!glfwWindowShouldClose(state.window_data.window)) {
+        kuta_loop(&models, &state, &config, &buffer_data);
+    }
+
+    kuta_deinit(&models, &state, &buffer_data);
+ 
     return EXIT_SUCCESS;
 }
