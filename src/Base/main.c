@@ -15,7 +15,7 @@
 
 
 
-void init(Config *config, BufferData *buffer_data, TextureData *texture_data, State *state, GeometryData *geometry_data) {
+void init(Config *config, BufferData *buffer_data, Models *models, State *state) {
     setup_error_handling();
     log_info();
 
@@ -35,12 +35,12 @@ void init(Config *config, BufferData *buffer_data, TextureData *texture_data, St
 
     camera_init(&state->input_state.camera);    init_vk(config, state);
 
-    create_swapchain(texture_data, state);
+    create_swapchain(state);
 
-    create_renderer(buffer_data, texture_data, geometry_data, state);
+    create_renderer(buffer_data, models, state);
 }
 
-void loop(BufferData *buffer_data, TextureData *texture_data, State *state, GeometryData *geometry_data, Config *config) {
+void loop(BufferData *buffer_data, Models *models, State *state, Config *config) {
 
     float lastFrame = 0.0f;
     while (!glfwWindowShouldClose(state->window_data.window)) {
@@ -56,23 +56,23 @@ void loop(BufferData *buffer_data, TextureData *texture_data, State *state, Geom
         vkWaitForFences(state->vk_core.device, 1, &state->renderer.in_flight_fence[frame], VK_TRUE, UINT64_MAX);
         vkResetFences(state->vk_core.device, 1, &state->renderer.in_flight_fence[frame]);
 
-        acquire_next_swapchain_image(texture_data, state);
-        record_command_buffer(buffer_data, config, geometry_data, state);
+        acquire_next_swapchain_image(state);
+        record_command_buffer(buffer_data, config, models, state);
         submit_command_buffer(buffer_data, state);
-        present_swapchain_image(texture_data, state);
+        present_swapchain_image(models, state);
 
         state->renderer.current_frame = (state->renderer.current_frame + 1) % MAX_FRAMES_IN_FLIGHT;    
     }
 }
 
-void cleanup(BufferData *buffer_data, TextureData *texture_data, State *state) {
+void cleanup(BufferData *buffer_data, Models *models, State *state) {
     destroy_renderer(state);
-    cleanup_swapchain(texture_data, state);  
+    cleanup_swapchain(state);  
 
-    vkDestroySampler(state->vk_core.device, texture_data->texture_sampler, state->vk_core.allocator);
-    vkDestroyImageView(state->vk_core.device, texture_data->texture_image_view, state->vk_core.allocator);
-    vkDestroyImage(state->vk_core.device, texture_data->texture_image, state->vk_core.allocator);
-    vkFreeMemory(state->vk_core.device, texture_data->texture_image_memory, state->vk_core.allocator);
+    vkDestroySampler(state->vk_core.device, models[0].texture->texture_sampler, state->vk_core.allocator);
+    vkDestroyImageView(state->vk_core.device, models[0].texture->texture_image_view, state->vk_core.allocator);
+    vkDestroyImage(state->vk_core.device, models[0].texture->texture_image, state->vk_core.allocator);
+    vkFreeMemory(state->vk_core.device, models[0].texture->texture_image_memory, state->vk_core.allocator);
     
     destroy_uniform_buffers(buffer_data, state);
     destroy_descriptor_sets(state);
@@ -114,12 +114,11 @@ int main(void) {
     };
 
     BufferData buffer_data = {};
-    TextureData texture_data = {};
-    GeometryData geometry_data = {};
-
-    init(&config , &buffer_data, &texture_data, &state, &geometry_data);
-    loop(&buffer_data, &texture_data, &state, &geometry_data, &config);
-    cleanup(&buffer_data, &texture_data, &state);
+    Models models = {};
+ 
+    init(&config , &buffer_data, &models, &state);
+    loop(&buffer_data, &models, &state, &config);
+    cleanup(&buffer_data, &models, &state);
 
     return EXIT_SUCCESS;
 }

@@ -245,7 +245,7 @@ void destroy_render_pass(State *state){
     vkDestroyRenderPass(state->vk_core.device, state->renderer.render_pass, state->vk_core.allocator);
 }
 
-void create_frame_buffers(State *state, TextureData *texture_data) {
+void create_frame_buffers(State *state) {
     uint32_t frame_buffer_count = state->swp_ch.image_count;
     state->renderer.frame_buffers = malloc(frame_buffer_count * sizeof(VkFramebuffer));
     EXPECT(state->renderer.frame_buffers == NULL, "Couldn't allocate memory for framebuffers array")
@@ -256,7 +256,7 @@ void create_frame_buffers(State *state, TextureData *texture_data) {
     for (int framebufferIndex = 0; framebufferIndex < frame_buffer_count; ++framebufferIndex) {
         VkImageView attachments[2] = {
             state->swp_ch.image_views[framebufferIndex],
-            texture_data->depth_image_view,
+            state->renderer.depth_image_view,
         };
         EXPECT(vkCreateFramebuffer(state->vk_core.device, &(VkFramebufferCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -349,7 +349,7 @@ void destroy_sync_objects(State *state) {
     free(state->renderer.finished_render_semaphore);
 }
 
-void record_command_buffer(BufferData *buffer_data, Config *config, GeometryData *geometry_data, State *state) {
+void record_command_buffer(BufferData *buffer_data, Config *config, Models *models, State *state) {
     VkCommandBuffer command_buffer = state->renderer.command_buffers[state->renderer.current_frame];
     
     // Reset the command buffer
@@ -406,7 +406,7 @@ void record_command_buffer(BufferData *buffer_data, Config *config, GeometryData
                             state->renderer.pipeline_layout, 0, 1,
                             &state->renderer.descriptor_sets[state->renderer.current_frame], 0, NULL);
 
-    uint32_t index_count = geometry_data->index_count; 
+    uint32_t index_count = models[0].geometry->index_count; 
     vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
     vkCmdEndRenderPass(command_buffer);
 
@@ -434,22 +434,35 @@ void submit_command_buffer(BufferData *buffer_data, State *state) {
     }, state->renderer.in_flight_fence[frame]), "Couldn't submit command buffer");
 }
 
-void create_renderer(BufferData *buffer_data, TextureData *texture_data, GeometryData *geometry_data, State *state){
+void create_renderer(BufferData *buffer_data,  Models *models, State *state){
+     // Initialize texture
+    models[0].texture = malloc(sizeof(TextureData));
+    if (!models[0].texture) {
+        printf("Failed to allocate texture data!\n");
+        return;
+    }
+
+    // ALLOCATE GEOMETRY STRUCT FIRST!
+    models[0].geometry = malloc(sizeof(GeometryData));
+    if (!models[0].geometry) {
+        printf("Failed to allocate geometry struct!\n");
+        return;
+    }
     create_render_pass(state);
     create_descriptor_set_layout(state);
     create_graphics_pipeline(state);
     create_command_pool(state);
-    create_depth_resources(texture_data, state);
-    create_frame_buffers(state, texture_data);
-    create_texture_image("./textures/pasted__twitch.png",texture_data, state);
-    create_texture_image_view(state, texture_data);
-    create_texture_sampler(state, texture_data);
-    load_model("./models/twitch.glb", geometry_data);
-    create_vertex_buffer(buffer_data, geometry_data, state);
-    create_index_buffer(buffer_data, geometry_data, state);
+    create_depth_resources(state);
+    create_frame_buffers(state);
+    create_texture_image("./textures/pasted__twitch.png", models, state);
+    create_texture_image_view(state, models);
+    create_texture_sampler(state, models);
+    load_model("./models/twitch.glb", models);
+    create_vertex_buffer(buffer_data, models, state);
+    create_index_buffer(buffer_data, models, state);
     create_descriptor_pool(state);
     create_uniform_buffers(state,buffer_data);
-    create_descriptor_sets(buffer_data, texture_data, state);
+    create_descriptor_sets(buffer_data, models, state);
     allocate_command_buffer(state);
     create_sync_objects(state);
 }

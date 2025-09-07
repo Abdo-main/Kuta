@@ -60,7 +60,7 @@ void create_descriptor_pool(State *state) {
     EXPECT(vkCreateDescriptorPool(state->vk_core.device, &pool_info, state->vk_core.allocator, &state->renderer.descriptor_pool), "Failed to create descriptor pool!")
 }
 
-void create_descriptor_sets(BufferData *buffer_data, TextureData *texture_data, State *state) {
+void create_descriptor_sets(BufferData *buffer_data, Models *models, State *state) {
     VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {};
     for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         layouts[i] = state->renderer.descriptor_set_layout;
@@ -85,8 +85,8 @@ void create_descriptor_sets(BufferData *buffer_data, TextureData *texture_data, 
         };
         VkDescriptorImageInfo image_info = {
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .imageView = texture_data->texture_image_view,
-            .sampler = texture_data->texture_sampler,
+            .imageView = models[0].texture->texture_image_view,
+            .sampler = models[0].texture->texture_sampler,
         };
         VkWriteDescriptorSet descriptor_writes[2] = {0};
         descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

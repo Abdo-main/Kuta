@@ -56,10 +56,6 @@ typedef struct {
     VkDeviceMemory texture_image_memory;
     VkImageView texture_image_view;
     VkSampler texture_sampler;
-    
-    VkImage depth_image;
-    VkDeviceMemory depth_image_memory;
-    VkImageView depth_image_view;
 } TextureData;
 
 typedef struct {
@@ -78,6 +74,11 @@ typedef struct {
 } GeometryData;
 
 typedef struct {
+    GeometryData* geometry;
+    TextureData* texture;
+} Models;
+
+typedef struct {
     VkPipeline graphics_pipeline;
     VkPipelineLayout pipeline_layout;
     VkRenderPass render_pass;
@@ -92,7 +93,9 @@ typedef struct {
     VkDescriptorSet* descriptor_sets;
     uint32_t descriptor_set_count;
     uint32_t current_frame;
-    
+    VkImage depth_image;
+    VkDeviceMemory depth_image_memory;
+    VkImageView depth_image_view;
 } Renderer;
 
 typedef struct {

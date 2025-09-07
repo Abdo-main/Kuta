@@ -114,9 +114,9 @@ void copy_buffer(VkDeviceSize size, VkBuffer src_buffer, VkBuffer dst_buffer, St
     end_single_time_commands(command_buffer, state);
 }
 
-void create_vertex_buffer(BufferData *buffer_data, GeometryData *geometry_data, State *state) {
-    size_t vertex_count = geometry_data->vertex_count;
-    VkDeviceSize buffer_size = sizeof(geometry_data->vertices[0]) * vertex_count;
+void create_vertex_buffer(BufferData *buffer_data, Models *models, State *state) {
+    size_t vertex_count = models[0].geometry->vertex_count;
+    VkDeviceSize buffer_size = sizeof(models[0].geometry->vertices[0]) * vertex_count;
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
@@ -124,7 +124,7 @@ void create_vertex_buffer(BufferData *buffer_data, GeometryData *geometry_data, 
         
     void* data;
     vkMapMemory(state->vk_core.device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
-       memcpy(data, geometry_data->vertices, (size_t)buffer_size);
+       memcpy(data, models[0].geometry->vertices, (size_t)buffer_size);
     vkUnmapMemory(state->vk_core.device, buffer_data->staging_buffer_memory);
 
     create_buffer(buffer_size, 
@@ -143,9 +143,9 @@ void destroy_vertex_buffer(BufferData *buffer_data, State *state){
     vkFreeMemory(state->vk_core.device, buffer_data->vertex_buffer_memory, state->vk_core.allocator);
 }
 
-void create_index_buffer(BufferData *buffer_data, GeometryData *geometry_data, State *state) {
-    size_t indices_count = geometry_data->index_count;
-    VkDeviceSize buffer_size = sizeof(geometry_data->indices[0]) * indices_count;
+void create_index_buffer(BufferData *buffer_data, Models *models, State *state) {
+    size_t indices_count = models[0].geometry->index_count;
+    VkDeviceSize buffer_size = sizeof(models[0].geometry->indices[0]) * indices_count;
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
@@ -153,7 +153,7 @@ void create_index_buffer(BufferData *buffer_data, GeometryData *geometry_data, S
         
     void* data;
     vkMapMemory(state->vk_core.device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
-       memcpy(data, geometry_data->indices, (size_t)buffer_size);
+       memcpy(data, models[0].geometry->indices, (size_t)buffer_size);
     vkUnmapMemory(state->vk_core.device, buffer_data->staging_buffer_memory);
 
     create_buffer(buffer_size, 
@@ -278,14 +278,14 @@ bool has_stencil_component(VkFormat format) {
 }
 
 
-void create_depth_resources(TextureData *texture_data, State *state) {
+void create_depth_resources(State *state) {
     VkFormat depth_format = find_depth_format(state);
 
     create_image(state->swp_ch.extent.width, state->swp_ch.extent.height, depth_format,
                  VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 &texture_data->depth_image, &texture_data->depth_image_memory, state);
+                 &state->renderer.depth_image, &state->renderer.depth_image_memory, state);
 
-    texture_data->depth_image_view = create_image_view(texture_data->depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT, state);
-    transition_image_layout(texture_data->depth_image, depth_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, state);
+    state->renderer.depth_image_view = create_image_view(state->renderer.depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT, state);
+    transition_image_layout(state->renderer.depth_image, depth_format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, state);
 }
 

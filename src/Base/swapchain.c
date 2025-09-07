@@ -10,7 +10,7 @@
 #include "vertex_data.h"
 
 
-void acquire_next_swapchain_image(TextureData *texture_data, State *state) {
+void acquire_next_swapchain_image(State *state) {
     uint32_t image_index;
     VkResult result = vkAcquireNextImageKHR(
         state->vk_core.device,
@@ -21,14 +21,14 @@ void acquire_next_swapchain_image(TextureData *texture_data, State *state) {
     state->swp_ch.acquired_image_index = image_index;
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreate_swapchain(texture_data, state);
+        recreate_swapchain(state);
         return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         EXPECT(2, "failed to acquire swap chain image!");
     }
 }
 
-void present_swapchain_image(TextureData *texture_data, State *state) {
+void present_swapchain_image(Models *models, State *state) {
     uint32_t image_index = state->swp_ch.acquired_image_index;
     VkPresentInfoKHR present_info = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -42,16 +42,25 @@ void present_swapchain_image(TextureData *texture_data, State *state) {
     VkResult result = vkQueuePresentKHR(state->vk_core.graphics_queue, &present_info);
     
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        recreate_swapchain(texture_data, state);
+        recreate_swapchain(state);
     } else if (result != VK_SUCCESS) {
         EXPECT(2, "Couldn't present swapchain image %i", state->swp_ch.acquired_image_index);
     }
 }
 
-void cleanup_swapchain(TextureData *texture_data, State *state) {
-    vkDestroyImageView(state->vk_core.device, texture_data->depth_image_view, state->vk_core.allocator);
-    vkDestroyImage(state->vk_core.device, texture_data->depth_image, state->vk_core.allocator);
-    vkFreeMemory(state->vk_core.device, texture_data->depth_image_memory, state->vk_core.allocator);
+void cleanup_swapchain(State *state) {
+    if (state->renderer.depth_image_view != VK_NULL_HANDLE) {
+        vkDestroyImageView(state->vk_core.device, state->renderer.depth_image_view, state->vk_core.allocator);
+        state->renderer.depth_image_view = VK_NULL_HANDLE;
+    }
+    if (state->renderer.depth_image != VK_NULL_HANDLE) {
+        vkDestroyImage(state->vk_core.device, state->renderer.depth_image, state->vk_core.allocator);
+        state->renderer.depth_image = VK_NULL_HANDLE;
+    }
+    if (state->renderer.depth_image_memory != VK_NULL_HANDLE) {
+        vkFreeMemory(state->vk_core.device, state->renderer.depth_image_memory, state->vk_core.allocator);
+        state->renderer.depth_image_memory = VK_NULL_HANDLE;
+    }
     if (state->swp_ch.image_views) {
         for (uint32_t i = 0; i < state->swp_ch.image_count; i++) {
             vkDestroyImageView(state->vk_core.device, state->swp_ch.image_views[i], state->vk_core.allocator);
@@ -174,7 +183,7 @@ void get_swapchain_images_and_create_image_views(VkSurfaceFormatKHR format, Stat
     }
 }
 
-void create_swapchain(TextureData *texture_data, State *state) {
+void create_swapchain(State *state) {
     // Query the surface capabilities for the current physical device and surface
     VkSurfaceCapabilitiesKHR capabilities = get_capabilities(&state->vk_core.physical_device, &state->vk_core.surface);
     
@@ -187,7 +196,7 @@ void create_swapchain(TextureData *texture_data, State *state) {
     // choose_extent
     state->swp_ch.extent = choose_extent(state->window_data.window, capabilities);
 
-    cleanup_swapchain(texture_data, state);
+    cleanup_swapchain(state);
 
     // Create the swapchain with the chosen parameters
     EXPECT(vkCreateSwapchainKHR(state->vk_core.device, &(VkSwapchainCreateInfoKHR){
@@ -212,7 +221,7 @@ void create_swapchain(TextureData *texture_data, State *state) {
    get_swapchain_images_and_create_image_views(format, state);
 }
 
-void recreate_swapchain(TextureData *texture_data, State *state) {
+void recreate_swapchain(State *state) {
     int width = 0, height = 0;
     while (width == 0 || height == 0) {
         glfwGetFramebufferSize(state->window_data.window, &width, &height);
@@ -221,9 +230,9 @@ void recreate_swapchain(TextureData *texture_data, State *state) {
     vkDeviceWaitIdle(state->vk_core.device);
 
     destroy_frame_buffers(state);
-    cleanup_swapchain(texture_data, state);
+    cleanup_swapchain(state);
 
-    create_swapchain(texture_data, state);
-    create_depth_resources(texture_data, state);
-    create_frame_buffers(state, texture_data);
+    create_swapchain(state);
+    create_depth_resources(state);
+    create_frame_buffers(state);
 }
