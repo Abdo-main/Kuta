@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
@@ -68,19 +69,19 @@ void loop(BufferData *buffer_data, Models *models, State *state, Config *config)
 void cleanup(BufferData *buffer_data, Models *models, State *state) {
     destroy_renderer(state);
     cleanup_swapchain(state);  
-
-    vkDestroySampler(state->vk_core.device, models[0].texture->texture_sampler, state->vk_core.allocator);
-    vkDestroyImageView(state->vk_core.device, models[0].texture->texture_image_view, state->vk_core.allocator);
-    vkDestroyImage(state->vk_core.device, models[0].texture->texture_image, state->vk_core.allocator);
-    vkFreeMemory(state->vk_core.device, models[0].texture->texture_image_memory, state->vk_core.allocator);
-    
+    for (size_t i = 0; i < 2; i++) {
+        vkDestroySampler(state->vk_core.device, models->texture[i].texture_sampler, state->vk_core.allocator);
+        vkDestroyImageView(state->vk_core.device, models->texture[i].texture_image_view, state->vk_core.allocator);
+        vkDestroyImage(state->vk_core.device, models->texture[i].texture_image, state->vk_core.allocator);
+        vkFreeMemory(state->vk_core.device, models->texture[i].texture_image_memory, state->vk_core.allocator);
+    }
     destroy_uniform_buffers(buffer_data, state);
     destroy_descriptor_sets(state);
     destroy_descriptor_set_layout(state);
-
-    destroy_index_buffer(buffer_data, state);
-    destroy_vertex_buffer(buffer_data, state);
-
+    for (size_t i = 0; i < 2; i++) {
+        destroy_index_buffers(models, state, i);
+        destroy_vertex_buffers(models, state, i);
+    }    
     if (state->vk_core.device != VK_NULL_HANDLE)
         vkDestroyDevice(state->vk_core.device, state->vk_core.allocator);
 

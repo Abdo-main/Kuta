@@ -35,11 +35,7 @@ typedef struct {
 } SwapchainData;
 
 typedef struct {
-    // Geometry buffers
-    VkBuffer vertex_buffer;
-    VkDeviceMemory vertex_buffer_memory;
-    VkBuffer index_buffer;
-    VkDeviceMemory index_buffer_memory;
+    
     
     // Per-frame uniform buffers
     VkBuffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
@@ -76,6 +72,12 @@ typedef struct {
 typedef struct {
     GeometryData* geometry;
     TextureData* texture;
+
+    // Geometry buffers
+    VkBuffer* vertex_buffers;
+    VkDeviceMemory* vertex_buffer_memory;
+    VkBuffer* index_buffers;
+    VkDeviceMemory* index_buffer_memory;
 } Models;
 
 typedef struct {

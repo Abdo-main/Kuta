@@ -114,9 +114,9 @@ void copy_buffer(VkDeviceSize size, VkBuffer src_buffer, VkBuffer dst_buffer, St
     end_single_time_commands(command_buffer, state);
 }
 
-void create_vertex_buffer(BufferData *buffer_data, Models *models, State *state) {
-    size_t vertex_count = models[0].geometry->vertex_count;
-    VkDeviceSize buffer_size = sizeof(models[0].geometry->vertices[0]) * vertex_count;
+void create_vertex_buffer(BufferData *buffer_data, Models *models, State *state, size_t index) {
+    size_t vertex_count = models->geometry[index].vertex_count;
+    VkDeviceSize buffer_size = sizeof(models->geometry[index].vertices[0]) * vertex_count;
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
@@ -124,28 +124,28 @@ void create_vertex_buffer(BufferData *buffer_data, Models *models, State *state)
         
     void* data;
     vkMapMemory(state->vk_core.device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
-       memcpy(data, models[0].geometry->vertices, (size_t)buffer_size);
+       memcpy(data, models->geometry[index].vertices, (size_t)buffer_size);
     vkUnmapMemory(state->vk_core.device, buffer_data->staging_buffer_memory);
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-    &buffer_data->vertex_buffer, &buffer_data->vertex_buffer_memory, state);
+    &models->vertex_buffers[index], &models->vertex_buffer_memory[index], state);
 
-    copy_buffer(buffer_size, buffer_data->staging_buffer, buffer_data->vertex_buffer, state);
+    copy_buffer(buffer_size, buffer_data->staging_buffer, models->vertex_buffers[index], state);
 
     vkDestroyBuffer(state->vk_core.device, buffer_data->staging_buffer, state->vk_core.allocator);
     vkFreeMemory(state->vk_core.device, buffer_data->staging_buffer_memory, state->vk_core.allocator);
 }
 
-void destroy_vertex_buffer(BufferData *buffer_data, State *state){
-    vkDestroyBuffer(state->vk_core.device, buffer_data->vertex_buffer, state->vk_core.allocator);
-    vkFreeMemory(state->vk_core.device, buffer_data->vertex_buffer_memory, state->vk_core.allocator);
+void destroy_vertex_buffers(Models *models, State *state, size_t index){
+    vkDestroyBuffer(state->vk_core.device, models->vertex_buffers[index], state->vk_core.allocator);
+    vkFreeMemory(state->vk_core.device, models->vertex_buffer_memory[index], state->vk_core.allocator);
 }
 
-void create_index_buffer(BufferData *buffer_data, Models *models, State *state) {
-    size_t indices_count = models[0].geometry->index_count;
-    VkDeviceSize buffer_size = sizeof(models[0].geometry->indices[0]) * indices_count;
+void create_index_buffer(BufferData *buffer_data, Models *models, State *state, size_t index) {
+    size_t indices_count = models->geometry[index].index_count;
+    VkDeviceSize buffer_size = sizeof(models->geometry[index].indices[0]) * indices_count;
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
@@ -153,22 +153,22 @@ void create_index_buffer(BufferData *buffer_data, Models *models, State *state) 
         
     void* data;
     vkMapMemory(state->vk_core.device, buffer_data->staging_buffer_memory, 0, buffer_size, 0, &data);
-       memcpy(data, models[0].geometry->indices, (size_t)buffer_size);
+       memcpy(data, models->geometry[index].indices, (size_t)buffer_size);
     vkUnmapMemory(state->vk_core.device, buffer_data->staging_buffer_memory);
 
     create_buffer(buffer_size, 
     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-    &buffer_data->index_buffer, &buffer_data->index_buffer_memory, state);
+    &models->index_buffers[index], &models->index_buffer_memory[index], state);
 
-    copy_buffer(buffer_size, buffer_data->staging_buffer, buffer_data->index_buffer, state);
+    copy_buffer(buffer_size, buffer_data->staging_buffer, models->index_buffers[index], state);
 
     vkDestroyBuffer(state->vk_core.device, buffer_data->staging_buffer, state->vk_core.allocator);
     vkFreeMemory(state->vk_core.device, buffer_data->staging_buffer_memory, state->vk_core.allocator);
 }
 
-void destroy_index_buffer(BufferData *buffer_data, State *state){
-    vkDestroyBuffer(state->vk_core.device, buffer_data->index_buffer, state->vk_core.allocator);
-    vkFreeMemory(state->vk_core.device, buffer_data->index_buffer_memory, state->vk_core.allocator);
+void destroy_index_buffers(Models *models, State *state, size_t index){
+    vkDestroyBuffer(state->vk_core.device, models->index_buffers[index], state->vk_core.allocator);
+    vkFreeMemory(state->vk_core.device, models->index_buffer_memory[index], state->vk_core.allocator);
 }
 
 void create_uniform_buffers(State *state, BufferData *buffer_data) {

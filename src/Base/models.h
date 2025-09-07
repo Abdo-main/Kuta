@@ -1,5 +1,5 @@
 #pragma once
 #include "main.h"
 
-void load_model(const char* filename, Models *models);
+void load_models(const char* filenames[], Models *models, size_t count, BufferData *buffer_data, State *state);
 

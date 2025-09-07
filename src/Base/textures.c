@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include "main.h"
 #include "utils.h"
+#include <stddef.h>
 #include <stdint.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
@@ -50,12 +51,12 @@ void create_image(uint32_t width, uint32_t height,
     vkBindImageMemory(state->vk_core.device, *image, *image_memory, 0);
 }
 
-void create_texture_image(char* filename, Models *models, State *state) {
+void create_texture_image(const char* filenames[], Models *models, State *state, size_t index) {
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memmory;
 
     int tex_width, tex_height, tex_channels;
-    stbi_uc* pixels = stbi_load(filename, &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load(filenames[index], &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
     VkDeviceSize image_size = tex_width * tex_height * 4;
 
     EXPECT(!pixels, "Failed to load texture image!")
@@ -76,13 +77,13 @@ void create_texture_image(char* filename, Models *models, State *state) {
                  VK_IMAGE_TILING_OPTIMAL,
                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                 &models[0].texture->texture_image,
-                 &models[0].texture->texture_image_memory,
+                 &models->texture[index].texture_image,
+                 &models->texture[index].texture_image_memory,
                  state);
 
-    transition_image_layout(models[0].texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, state);
-    copy_buffer_to_image(staging_buffer, models[0].texture->texture_image, (uint32_t)tex_width, (uint32_t)tex_height, state);
-    transition_image_layout(models[0].texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, state);
+    transition_image_layout(models->texture[index].texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, state);
+    copy_buffer_to_image(staging_buffer, models->texture[index].texture_image, (uint32_t)tex_width, (uint32_t)tex_height, state);
+    transition_image_layout(models->texture[index].texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, state);
     // CLEANUP
     vkDestroyBuffer(state->vk_core.device, staging_buffer, state->vk_core.allocator);
     vkFreeMemory(state->vk_core.device, staging_buffer_memmory, state->vk_core.allocator);
@@ -186,11 +187,11 @@ void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32
     end_single_time_commands(command_buffer, state);
 }
 
-void create_texture_image_view(State *state, Models *models) {
-    models[0].texture->texture_image_view = create_image_view(models[0].texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, state);
+void create_texture_image_view(State *state, Models *models, size_t index) {
+    models->texture[index].texture_image_view = create_image_view(models->texture[index].texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, state);
 }
 
-void create_texture_sampler(State *state, Models *models) {
+void create_texture_sampler(State *state, Models *models, size_t index) {
     VkPhysicalDeviceProperties properties = {};
     vkGetPhysicalDeviceProperties(state->vk_core.physical_device, &properties);
 
@@ -212,7 +213,7 @@ void create_texture_sampler(State *state, Models *models) {
         .minLod = 0.0f,
         .maxLod = 0.0f,
     };
-    EXPECT(vkCreateSampler(state->vk_core.device, &sampler_info, state->vk_core.allocator, &models[0].texture->texture_sampler), "Failed to create texture sampler")
+    EXPECT(vkCreateSampler(state->vk_core.device, &sampler_info, state->vk_core.allocator, &models->texture[index].texture_sampler), "Failed to create texture sampler")
 }
 
 

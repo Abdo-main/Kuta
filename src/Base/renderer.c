@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
-
+#include <string.h>
 
 #include "main.h"
 #include "models.h"
@@ -382,12 +382,7 @@ void record_command_buffer(BufferData *buffer_data, Config *config, Models *mode
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, state->renderer.graphics_pipeline);
 
-    VkBuffer vertex_buffers = {buffer_data->vertex_buffer};
-    VkDeviceSize offsets[] = {0};
-
-    vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(command_buffer, buffer_data->index_buffer, 0, VK_INDEX_TYPE_UINT32);
-
+     
     VkViewport viewport = {
         .x = 0.0f, .y = 0.0f,
         .width = state->swp_ch.extent.width,
@@ -402,12 +397,23 @@ void record_command_buffer(BufferData *buffer_data, Config *config, Models *mode
     };
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            state->renderer.pipeline_layout, 0, 1,
-                            &state->renderer.descriptor_sets[state->renderer.current_frame], 0, NULL);
+    for (size_t i = 0; i < 2; i++) {
+        // Bind vertex and index buffers for this model
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &models->vertex_buffers[i], offsets);
+        vkCmdBindIndexBuffer(command_buffer, models->index_buffers[i], 0, VK_INDEX_TYPE_UINT32);
+        
+        // Bind the correct descriptor set for this frame and model
+        size_t descriptor_index = state->renderer.current_frame * 2 + i;
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                               state->renderer.pipeline_layout, 0, 1,
+                               &state->renderer.descriptor_sets[descriptor_index], 0, NULL);
+        
+        // Draw this model
+        uint32_t index_count = models->geometry[i].index_count;
+        vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
+    }
 
-    uint32_t index_count = models[0].geometry->index_count; 
-    vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
     vkCmdEndRenderPass(command_buffer);
 
     EXPECT(vkEndCommandBuffer(command_buffer), "Couldn't end command buffer");
@@ -434,32 +440,45 @@ void submit_command_buffer(BufferData *buffer_data, State *state) {
     }, state->renderer.in_flight_fence[frame]), "Couldn't submit command buffer");
 }
 
-void create_renderer(BufferData *buffer_data,  Models *models, State *state){
-     // Initialize texture
-    models[0].texture = malloc(sizeof(TextureData));
-    if (!models[0].texture) {
-        printf("Failed to allocate texture data!\n");
-        return;
-    }
+const char* MODEL_FILES[2] = {
+    "./models/twitch.glb",
+    "./models/t1_yone.glb",
+};
 
-    // ALLOCATE GEOMETRY STRUCT FIRST!
-    models[0].geometry = malloc(sizeof(GeometryData));
-    if (!models[0].geometry) {
-        printf("Failed to allocate geometry struct!\n");
-        return;
-    }
+size_t model_count = 2;
+const char* TEXTURE_FILES[2] = {
+    "./textures/pasted__twitch.png",
+    "./textures/Body.png",
+};
+
+void create_renderer(BufferData *buffer_data,  Models *models, State *state){
+    models->geometry = malloc(sizeof(GeometryData) * model_count);
+    models->texture = malloc(sizeof(TextureData) * model_count);
+    
+    // Initialize texture data to zero to avoid garbage values
+    memset(models->texture, 0, sizeof(TextureData) * model_count);
+    memset(models->geometry, 0, sizeof(GeometryData) * model_count);
+    
+    // THEN: Allocate the buffer pointer arrays
+    models->vertex_buffers = malloc(sizeof(VkBuffer) * model_count);
+    models->vertex_buffer_memory = malloc(sizeof(VkDeviceMemory) * model_count);
+    models->index_buffers = malloc(sizeof(VkBuffer) * model_count);
+    models->index_buffer_memory = malloc(sizeof(VkDeviceMemory) * model_count);
+     
+    
     create_render_pass(state);
     create_descriptor_set_layout(state);
     create_graphics_pipeline(state);
     create_command_pool(state);
     create_depth_resources(state);
     create_frame_buffers(state);
-    create_texture_image("./textures/pasted__twitch.png", models, state);
-    create_texture_image_view(state, models);
-    create_texture_sampler(state, models);
-    load_model("./models/twitch.glb", models);
-    create_vertex_buffer(buffer_data, models, state);
-    create_index_buffer(buffer_data, models, state);
+    for (size_t i = 0; i < 2; i++) {
+        create_texture_image(TEXTURE_FILES, models, state, i);
+        create_texture_image_view(state, models, i);
+        create_texture_sampler(state, models, i);
+    }
+    
+    load_models(MODEL_FILES, models, model_count, buffer_data, state);
     create_descriptor_pool(state);
     create_uniform_buffers(state,buffer_data);
     create_descriptor_sets(buffer_data, models, state);
