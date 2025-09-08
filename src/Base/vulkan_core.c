@@ -9,13 +9,13 @@
 #include "main.h"
 #include "utils.h"
 
-void create_instance(State *state, Config *config) {
+void create_instance(State *state, Settings *settings) {
     uint32_t required_extensions_count; 
     const char **required_extensions = glfwGetRequiredInstanceExtensions(&required_extensions_count);
     VkApplicationInfo appInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pApplicationName = config->application_name,
-        .pEngineName = config->engine_name,
+        .pApplicationName = settings->application_name,
+        .pEngineName = settings->engine_name,
         .apiVersion = state->vk_core.api_version,
     };
     VkInstanceCreateInfo createInfo = {
@@ -93,8 +93,8 @@ void get_queue(State *state) {
     vkGetDeviceQueue(state->vk_core.device, state->vk_core.graphics_queue_family, 0, &state->vk_core.graphics_queue);
 }
 
-void init_vk(Config *config, State *state) {
-    create_instance(state, config);
+void init_vk(Settings *settings, State *state) {
+    create_instance(state, settings);
     select_physical_device(state);
     create_surface(state);
     select_queue_family(state);

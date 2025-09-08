@@ -4,57 +4,48 @@
 #include <vulkan/vulkan_core.h>
 #include <stdbool.h>
 
-#include "main.h"
 #include "kuta.h"
+#include "main.h"
 
 #define MODELS_COUNT 2
 #define TEXTURE_COUNT 2
 
 int main(void) {
+    Settings settings = {
+        .api_version = VK_API_VERSION_1_4,
+        .application_name = "Kudo",
+        .engine_name = "Kuta",
+        .background_color = (VkClearColorValue){1.0f, 1.5f, 1.0f},
+        .window_width = 800,
+        .window_height = 600,
+        .window_title = "Hello, Kuta Library!!!",
+    };
+ 
     const char* models_files[MODELS_COUNT] = {
         "./models/twitch.glb",
         "./models/t1_yone.glb",
     };
 
-    const char* texture_files[TEXTURE_COUNT] = {
+    const char* textures_files[TEXTURE_COUNT] = {
         "./textures/pasted__twitch.png",
         "./textures/Body.png",
     }; 
 
-    Models models = {
-        .model_count = MODELS_COUNT,
-        .model_files = models_files,
-        .texture_files = texture_files,
-    };
+    kuta_init(&settings);
 
-    State state = {
-        .window_data = {
-            .fullscreen = false,
-            .width = 800,
-            .height = 600,
-            .title = "Hello Library",
-        },
-        .vk_core = {
-            .api_version = VK_API_VERSION_1_4,
-        }
-    };
+    renderer_init();
 
-    Config config = {
-        .application_name = "Kudo",
-        .engine_name = "Kuta",
-        .background_color = (VkClearColorValue) {1.0f, 1.0f, 1.0f},
-        .window_title = "Hello, World!!!",
-    };
+    load_texture(textures_files);
+    load_glbs(models_files);
 
-    BufferData buffer_data = {};
+    renderer_deinit();
 
-    kuta_init(&models, &state, &config, &buffer_data);
-
-    while (!glfwWindowShouldClose(state.window_data.window)) {
-        kuta_loop(&models, &state, &config, &buffer_data);
+    while (running()) {
+        begin_frame();
+        end_frame();
     }
 
-    kuta_deinit(&models, &state, &buffer_data);
+    kuta_deinit();
  
     return EXIT_SUCCESS;
 }

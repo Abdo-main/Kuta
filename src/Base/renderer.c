@@ -7,8 +7,6 @@
 #include <string.h>
 
 #include "main.h"
-#include "models.h"
-#include "textures.h"
 #include "vertex_data.h"
 #include "utils.h"
 #include "descriptors.h"
@@ -349,7 +347,7 @@ void destroy_sync_objects(State *state) {
     free(state->renderer.finished_render_semaphore);
 }
 
-void record_command_buffer(BufferData *buffer_data, Config *config, Models *models, State *state) {
+void record_command_buffer(BufferData *buffer_data, Settings *settings, Models *models, State *state) {
     VkCommandBuffer command_buffer = state->renderer.command_buffers[state->renderer.current_frame];
     
     // Reset the command buffer
@@ -362,7 +360,7 @@ void record_command_buffer(BufferData *buffer_data, Config *config, Models *mode
 
     VkClearValue clear_values[2] = { 
         {
-            .color = config->background_color,
+            .color = settings->background_color,
         },
         {
             .depthStencil = {1.0f, 0},
@@ -455,27 +453,6 @@ void alloc_model_data(Models *models){
     models->index_buffer_memory = malloc(sizeof(VkDeviceMemory) * models->model_count);
 }
 
-void create_renderer(BufferData *buffer_data,  Models *models, State *state){
-    alloc_model_data(models);
-    create_render_pass(state);
-    create_descriptor_set_layout(state);
-    create_graphics_pipeline(state);
-    create_command_pool(state);
-    create_depth_resources(state);
-    create_frame_buffers(state);
-    for (size_t i = 0; i < 2; i++) {
-        create_texture_image(models->texture_files, models, state, i);
-        create_texture_image_view(state, models, i);
-        create_texture_sampler(state, models, i);
-    }
-    
-    load_models(models->model_files, models, models->model_count, buffer_data, state);
-    create_descriptor_pool(state);
-    create_uniform_buffers(state,buffer_data);
-    create_descriptor_sets(buffer_data, models, state);
-    allocate_command_buffer(state);
-    create_sync_objects(state);
-}
 
 void destroy_renderer(State *state){
     vkQueueWaitIdle(state->vk_core.graphics_queue);

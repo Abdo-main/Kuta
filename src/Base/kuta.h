@@ -2,12 +2,22 @@
 
 #include "main.h"
 
-void kuta_init(Models *models, State *state, Config *config, BufferData *buffer_data);
+bool kuta_init(Settings *settings);
 
-void renderer_init(Models *models, State *state);
+void renderer_init(void);
 
-void renderer_deinit(Models *models, State *state, BufferData *buffer_data);
+void load_glbs(const char* models_files[]);
 
-void kuta_deinit(Models *models, State *state, BufferData *buffer_data);
-void kuta_loop(Models *models, State *state, Config *config, BufferData *buffer_data);
+void load_texture(const char* textures_files[]);
+
+void renderer_deinit(void);
+
+void begin_frame(void);
+
+void end_frame(void);
+
+bool running();
+
+void kuta_deinit(void);
+
 

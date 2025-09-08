@@ -11,9 +11,9 @@
 #include "vertex_data.h"
 #include "textures.h"
 
-void load_textures(Models *models, State *state){
+void load_textures(Models *models, State *state, const char* textures_files[]){
     for (size_t i = 0; i < 2; i++) {
-        create_texture_image(models->texture_files, models, state, i);
+        create_texture_image(textures_files, models, state, i);
         create_texture_image_view(state, models, i);
         create_texture_sampler(state, models, i);
     }

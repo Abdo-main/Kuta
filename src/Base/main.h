@@ -105,13 +105,6 @@ typedef struct {
 } Renderer;
 
 typedef struct {
-    const char *window_title;
-    const char *application_name;
-    const char *engine_name;
-    VkClearColorValue background_color;
-} Config;
-
-typedef struct {
     vec3 position;
     vec3 front;
     vec3 up;
@@ -141,4 +134,21 @@ typedef struct {
     WindowData window_data;
     InputState input_state;
 } State;
+
+typedef struct{
+    const char *window_title;
+    const char *application_name;
+    const char *engine_name;
+
+    uint32_t window_width, window_height;
+    uint32_t api_version;
+    VkClearColorValue background_color;
+} Settings;
+
+typedef struct {
+    Models models;
+    State state;
+    BufferData buffer_data;
+    Settings settings;
+} KutaContext;
 
