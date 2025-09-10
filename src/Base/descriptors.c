@@ -42,9 +42,9 @@ void destroy_descriptor_set_layout(State *state){
     vkDestroyDescriptorSetLayout(state->vk_core.device, state->renderer.descriptor_set_layout, state->vk_core.allocator);
 }
 
-void create_descriptor_pool(State *state) {
+void create_descriptor_pool(State *state, Models *models) {
     // Calculate total descriptor sets needed: one per frame per model
-    uint32_t total_sets = MAX_FRAMES_IN_FLIGHT * 2;
+    uint32_t total_sets = MAX_FRAMES_IN_FLIGHT * models->model_count;
     
     VkDescriptorPoolSize pool_sizes[2] = {0};
     pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

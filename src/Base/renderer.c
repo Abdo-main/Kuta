@@ -395,14 +395,14 @@ void record_command_buffer(BufferData *buffer_data, Settings *settings, Models *
     };
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-    for (size_t i = 0; i < 2; i++) {
+    for (size_t i = 0; i < models->model_count; i++) {
         // Bind vertex and index buffers for this model
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &models->vertex_buffers[i], offsets);
         vkCmdBindIndexBuffer(command_buffer, models->index_buffers[i], 0, VK_INDEX_TYPE_UINT32);
         
         // Bind the correct descriptor set for this frame and model
-        size_t descriptor_index = state->renderer.current_frame * 2 + i;
+        size_t descriptor_index = state->renderer.current_frame * models->model_count + i;
         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                state->renderer.pipeline_layout, 0, 1,
                                &state->renderer.descriptor_sets[descriptor_index], 0, NULL);

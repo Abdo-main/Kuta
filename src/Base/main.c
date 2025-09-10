@@ -19,16 +19,15 @@ int main(void) {
         .window_width = 800,
         .window_height = 600,
         .window_title = "Hello, Kuta Library!!!",
+        .models_count = 1,
     };
  
     const char* models_files[MODELS_COUNT] = {
-        "./models/twitch.glb",
-        "./models/t1_yone.glb",
+        "./models/aatrox.glb",
     };
 
     const char* textures_files[TEXTURE_COUNT] = {
-        "./textures/pasted__twitch.png",
-        "./textures/Body.png",
+        "./textures/Body-Aatrox.png",
     }; 
 
     kuta_init(&settings);

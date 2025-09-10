@@ -19,12 +19,11 @@
 static KutaContext* kuta_context = NULL;
 
 bool kuta_init(Settings *settings){
-    if (kuta_context != NULL) {
-        // Already initialized
+       if (kuta_context != NULL) {
         return false;
     }
-    kuta_context = malloc(sizeof(KutaContext));
-    if (!kuta_context) return false;
+    kuta_context = calloc(1, sizeof(KutaContext)); // Use calloc instead of malloc
+    if (!kuta_context) return false; 
 
     setup_error_handling();
     log_info();
@@ -34,7 +33,7 @@ bool kuta_init(Settings *settings){
     kuta_context->state.window_data.title = settings->window_title;
     kuta_context->state.vk_core.api_version = settings->api_version;
     kuta_context->settings.background_color = settings->background_color;
-    kuta_context->models.model_count = 2;
+    kuta_context->models.model_count = settings->models_count;
     
     create_window(&kuta_context->state.window_data);
     // Set the state as window user pointer so callbacks can access it
@@ -69,7 +68,7 @@ void renderer_init(void){
 }
 
 void renderer_deinit(void){
-    create_descriptor_pool(&kuta_context->state);
+    create_descriptor_pool(&kuta_context->state, &kuta_context->models);
     create_uniform_buffers(&kuta_context->state, &kuta_context->buffer_data);
     create_descriptor_sets(&kuta_context->buffer_data, &kuta_context->models, &kuta_context->state);
     allocate_command_buffer(&kuta_context->state);
@@ -110,19 +109,31 @@ void end_frame(void){
     kuta_context->state.renderer.current_frame = (kuta_context->state.renderer.current_frame + 1) % MAX_FRAMES_IN_FLIGHT; 
 }
 
-void kuta_deinit(void){
+void kuta_deinit(void) {
+    if (!kuta_context) return;
+    
+    vkDeviceWaitIdle(kuta_context->state.vk_core.device); // Wait before cleanup
+    
     destroy_renderer(&kuta_context->state);
-    cleanup_swapchain(&kuta_context->state);  
-    for (size_t i = 0; i < 2; i++) {
-        vkDestroySampler(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_sampler, kuta_context->state.vk_core.allocator);
-        vkDestroyImageView(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_image_view, kuta_context->state.vk_core.allocator);
-        vkDestroyImage(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_image, kuta_context->state.vk_core.allocator);
-        vkFreeMemory(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_image_memory, kuta_context->state.vk_core.allocator);
+    cleanup_swapchain(&kuta_context->state);
+    for (size_t i = 0; i < kuta_context->models.model_count; i++) {
+        if (kuta_context->models.texture[i].texture_sampler != VK_NULL_HANDLE){
+            vkDestroySampler(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_sampler, kuta_context->state.vk_core.allocator);
+        }
+        if (kuta_context->models.texture[i].texture_image_view != VK_NULL_HANDLE){
+            vkDestroyImageView(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_image_view, kuta_context->state.vk_core.allocator);
+        }
+        if (kuta_context->models.texture[i].texture_image != VK_NULL_HANDLE){
+            vkDestroyImage(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_image, kuta_context->state.vk_core.allocator);
+        }
+        if (kuta_context->models.texture[i].texture_image_memory != VK_NULL_HANDLE){
+            vkFreeMemory(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_image_memory, kuta_context->state.vk_core.allocator);
+        }
     }
     destroy_uniform_buffers(&kuta_context->buffer_data, &kuta_context->state);
     destroy_descriptor_sets(&kuta_context->state);
     destroy_descriptor_set_layout(&kuta_context->state);
-    for (size_t i = 0; i < 2; i++) {
+    for (size_t i = 0; i < kuta_context->models.model_count; i++) {
         destroy_index_buffers(&kuta_context->models, &kuta_context->state, i);
         destroy_vertex_buffers(&kuta_context->models, &kuta_context->state, i);
     }    

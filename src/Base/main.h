@@ -142,6 +142,7 @@ typedef struct{
 
     uint32_t window_width, window_height;
     uint32_t api_version;
+    uint32_t models_count;
     VkClearColorValue background_color;
 } Settings;
 
