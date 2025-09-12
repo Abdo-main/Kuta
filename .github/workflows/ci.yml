@@ -114,7 +114,7 @@ jobs:
         shell: powershell
         run: |
           $url = "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/vulkansdk-windows-X64-$env:VULKAN_SDK_VERSION.exe"
-          Invoke-WebRequest -Uri $url -OutFile VulkanSDK-Installer.exe
+          Invoke-WebRequest -Uri $url -OutFile vulkansdk-windows-X64.exe
           Start-Process -FilePath VulkanSDK-Installer.exe -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
 
       - name: Build with MinGW (MSYS2)
