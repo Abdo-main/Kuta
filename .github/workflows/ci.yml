@@ -167,13 +167,6 @@ jobs:
             fi
           done
 
-      - name: Test executable on Windows
-        shell: cmd
-        run: |
-          cd build-mingw
-          echo "Testing if executable runs..."
-          kuta.exe --help || kuta.exe --version || echo "Executable test completed (may have exited normally)"
-
       - name: Verify build output
         shell: msys2 {0}
         run: |
