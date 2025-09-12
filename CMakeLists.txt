@@ -38,8 +38,6 @@ endif()
 find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 
-set(STB_DIR ${CMAKE_SOURCE_DIR}/third_party)
-include_directories(${STB_DIR})# Platform-specific include directories
 
 if(WIN32)
     # Try multiple possible cglm locations
