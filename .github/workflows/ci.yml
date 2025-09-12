@@ -2,11 +2,11 @@ name: Kuta CI/CD
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   release:
-    types: [ published ]
+    types: [published]
 
 env:
   BUILD_TYPE: Release
@@ -15,225 +15,225 @@ env:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          cmake \
-          ninja-build \
-          libglfw3-dev \
-          libvulkan-dev \
-          vulkan-tools \
-          spirv-tools \
-          mesa-vulkan-drivers \
-          vulkan-validationlayers \
-          libcglm-dev \
-          libassimp-dev \
-          xvfb 
-    
-    - name: Setup Vulkan SDK
-    run: |
-      # Use modern apt keyring method
-      wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
-      sudo chmod 644 /etc/apt/trusted.gpg.d/lunarg.asc
-      echo "deb https://packages.lunarg.com/vulkan/1.3.261 jammy main" | sudo tee /etc/apt/sources.list.d/lunarg-vulkan.list
-      sudo apt update
-      # Install only essential Vulkan SDK components (avoid problematic packages)
-      sudo apt install vulkan-sdk-core vulkan-tools glslang-tools spirv-tools 
-    - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-    
-    - name: Build Kuta
-      run: cmake --build build --config $BUILD_TYPE --parallel $(nproc)
-    
-    - name: Verify shaders copied
-      run: |
-        echo "Checking for shader files..."
-        ls -la build/*.spv || echo "No .spv files found in build directory"
-        ls -la shaders/ || echo "No shaders directory found"
-    
-    - name: Test executable
-      run: |
-        export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
-        export VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
-        # Test that binary exists and can show help/version
-        file build/kuta
-        echo "Binary built successfully"
-    
-    - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: kuta-linux-x64
-        path: |
-          build/kuta
-          build/*.spv
-        retention-days: 30
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            libglfw3-dev \
+            libvulkan-dev \
+            vulkan-tools \
+            spirv-tools \
+            mesa-vulkan-drivers \
+            vulkan-validationlayers \
+            libcglm-dev \
+            libassimp-dev \
+            xvfb
+
+      - name: Setup Vulkan SDK
+        run: |
+          # Use modern apt keyring method
+          wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+          sudo chmod 644 /etc/apt/trusted.gpg.d/lunarg.asc
+          echo "deb https://packages.lunarg.com/vulkan/1.3.261 jammy main" | sudo tee /etc/apt/sources.list.d/lunarg-vulkan.list
+          sudo apt update
+          # Install only essential Vulkan SDK components (avoid problematic packages)
+          sudo apt install vulkan-sdk-core vulkan-tools glslang-tools spirv-tools
+
+      - name: Configure CMake
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+      - name: Build Kuta
+        run: cmake --build build --config $BUILD_TYPE --parallel $(nproc)
+
+      - name: Verify shaders copied
+        run: |
+          echo "Checking for shader files..."
+          ls -la build/*.spv || echo "No .spv files found in build directory"
+          ls -la shaders/ || echo "No shaders directory found"
+
+      - name: Test executable
+        run: |
+          export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          export VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
+          # Test that binary exists and can show help/version
+          file build/kuta
+          echo "Binary built successfully"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuta-linux-x64
+          path: |
+            build/kuta
+            build/*.spv
+          retention-days: 30
 
   build-windows-mingw:
     runs-on: windows-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    
-    - name: Setup MinGW
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        update: true
-        install: >-
-          mingw-w64-x86_64-toolchain
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-ninja
-          mingw-w64-x86_64-glfw
-          mingw-w64-x86_64-vulkan-headers
-          mingw-w64-x86_64-vulkan-loader
-          mingw-w64-x86_64-cglm
-          mingw-w64-x86_64-assimp
-    
-    - name: Cache Vulkan SDK
-      id: cache-vulkan-sdk
-      uses: actions/cache@v4
-      with:
-        path: C:/VulkanSDK
-        key: vulkan-sdk-windows-${{ env.VULKAN_SDK_VERSION }}
-    
-    - name: Download Vulkan SDK
-      if: steps.cache-vulkan-sdk.outputs.cache-hit != 'true'
-      shell: powershell
-      run: |
-        $url = "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/VulkanSDK-$env:VULKAN_SDK_VERSION-Installer.exe"
-        Invoke-WebRequest -Uri $url -OutFile VulkanSDK-Installer.exe
-        Start-Process -FilePath VulkanSDK-Installer.exe -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
-    
-    - name: Build with MinGW (MSYS2)
-      shell: msys2 {0}
-      run: |
-        export VULKAN_SDK="/c/VulkanSDK/$VULKAN_SDK_VERSION"
-        mkdir -p build-mingw
-        cd build-mingw
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-          -DCMAKE_C_COMPILER=gcc \
-          -DCMAKE_MAKE_PROGRAM=mingw32-make
-        mingw32-make -j$(nproc)
-    
-    - name: Verify build output
-      shell: msys2 {0}
-      run: |
-        echo "Checking build results..."
-        ls -la build-mingw/
-        file build-mingw/kuta.exe
-        ls -la build-mingw/*.spv || echo "No shader files found"
-    
-    - name: Upload Windows MinGW artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: kuta-windows-mingw-x64
-        path: |
-          build-mingw/kuta.exe
-          build-mingw/*.spv
-        retention-days: 30
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MinGW
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-glfw
+            mingw-w64-x86_64-vulkan-headers
+            mingw-w64-x86_64-vulkan-loader
+            mingw-w64-x86_64-cglm
+            mingw-w64-x86_64-assimp
+
+      - name: Cache Vulkan SDK
+        id: cache-vulkan-sdk
+        uses: actions/cache@v4
+        with:
+          path: C:/VulkanSDK
+          key: vulkan-sdk-windows-${{ env.VULKAN_SDK_VERSION }}
+
+      - name: Download Vulkan SDK
+        if: steps.cache-vulkan-sdk.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          $url = "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/VulkanSDK-$env:VULKAN_SDK_VERSION-Installer.exe"
+          Invoke-WebRequest -Uri $url -OutFile VulkanSDK-Installer.exe
+          Start-Process -FilePath VulkanSDK-Installer.exe -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
+
+      - name: Build with MinGW (MSYS2)
+        shell: msys2 {0}
+        run: |
+          export VULKAN_SDK="/c/VulkanSDK/$VULKAN_SDK_VERSION"
+          mkdir -p build-mingw
+          cd build-mingw
+          cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_MAKE_PROGRAM=mingw32-make
+          mingw32-make -j$(nproc)
+
+      - name: Verify build output
+        shell: msys2 {0}
+        run: |
+          echo "Checking build results..."
+          ls -la build-mingw/
+          file build-mingw/kuta.exe
+          ls -la build-mingw/*.spv || echo "No shader files found"
+
+      - name: Upload Windows MinGW artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuta-windows-mingw-x64
+          path: |
+            build-mingw/kuta.exe
+            build-mingw/*.spv
+          retention-days: 30
 
   build-windows-msvc:
     runs-on: windows-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    
-    - name: Setup MSVC
-      uses: microsoft/setup-msbuild@v2
-    
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
-    
-    - name: Install dependencies with vcpkg
-      run: |
-        vcpkg install glfw3:x64-windows
-        vcpkg install cglm:x64-windows  
-        vcpkg install assimp:x64-windows
-    
-    - name: Cache Vulkan SDK
-      id: cache-vulkan-sdk-msvc
-      uses: actions/cache@v4
-      with:
-        path: C:/VulkanSDK
-        key: vulkan-sdk-windows-msvc-${{ env.VULKAN_SDK_VERSION }}
-    
-    - name: Download Vulkan SDK
-      if: steps.cache-vulkan-sdk-msvc.outputs.cache-hit != 'true'
-      run: |
-        $url = "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/VulkanSDK-$env:VULKAN_SDK_VERSION-Installer.exe"
-        Invoke-WebRequest -Uri $url -OutFile VulkanSDK-Installer.exe
-        Start-Process -FilePath VulkanSDK-Installer.exe -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
-    
-    - name: Configure CMake with vcpkg
-      run: |
-        $env:VULKAN_SDK = "C:/VulkanSDK/$env:VULKAN_SDK_VERSION"
-        cmake -B build -G "Visual Studio 17 2022" -A x64 `
-          -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-    
-    - name: Build with MSVC
-      run: cmake --build build --config $env:BUILD_TYPE --parallel
-    
-    - name: Upload Windows MSVC artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: kuta-windows-msvc-x64
-        path: |
-          build/${{ env.BUILD_TYPE }}/kuta.exe
-          build/${{ env.BUILD_TYPE }}/*.spv
-        retention-days: 30
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSVC
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: "a42af01b72c28a8e1d7b48107b33e4f286a55ef6"
+
+      - name: Install dependencies with vcpkg
+        run: |
+          vcpkg install glfw3:x64-windows
+          vcpkg install cglm:x64-windows  
+          vcpkg install assimp:x64-windows
+
+      - name: Cache Vulkan SDK
+        id: cache-vulkan-sdk-msvc
+        uses: actions/cache@v4
+        with:
+          path: C:/VulkanSDK
+          key: vulkan-sdk-windows-msvc-${{ env.VULKAN_SDK_VERSION }}
+
+      - name: Download Vulkan SDK
+        if: steps.cache-vulkan-sdk-msvc.outputs.cache-hit != 'true'
+        run: |
+          $url = "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/VulkanSDK-$env:VULKAN_SDK_VERSION-Installer.exe"
+          Invoke-WebRequest -Uri $url -OutFile VulkanSDK-Installer.exe
+          Start-Process -FilePath VulkanSDK-Installer.exe -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
+
+      - name: Configure CMake with vcpkg
+        run: |
+          $env:VULKAN_SDK = "C:/VulkanSDK/$env:VULKAN_SDK_VERSION"
+          cmake -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build with MSVC
+        run: cmake --build build --config $env:BUILD_TYPE --parallel
+
+      - name: Upload Windows MSVC artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kuta-windows-msvc-x64
+          path: |
+            build/${{ env.BUILD_TYPE }}/kuta.exe
+            build/${{ env.BUILD_TYPE }}/*.spv
+          retention-days: 30
 
   release:
     needs: [build-linux, build-windows-mingw, build-windows-msvc]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
-    
-    steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-    
-    - name: Create release archives
-      run: |
-        # Create Linux archive
-        cd kuta-linux-x64
-        tar -czf ../kuta-linux-x64.tar.gz *
-        cd ..
-        
-        # Create Windows MinGW archive
-        cd kuta-windows-mingw-x64
-        zip -r ../kuta-windows-mingw-x64.zip *
-        cd ..
-        
-        # Create Windows MSVC archive
-        cd kuta-windows-msvc-x64
-        zip -r ../kuta-windows-msvc-x64.zip *
-        cd ..
-    
-    - name: Upload release assets
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          kuta-linux-x64.tar.gz
-          kuta-windows-mingw-x64.zip
-          kuta-windows-msvc-x64.zip
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create release archives
+        run: |
+          # Create Linux archive
+          cd kuta-linux-x64
+          tar -czf ../kuta-linux-x64.tar.gz *
+          cd ..
+
+          # Create Windows MinGW archive
+          cd kuta-windows-mingw-x64
+          zip -r ../kuta-windows-mingw-x64.zip *
+          cd ..
+
+          # Create Windows MSVC archive
+          cd kuta-windows-msvc-x64
+          zip -r ../kuta-windows-msvc-x64.zip *
+          cd ..
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            kuta-linux-x64.tar.gz
+            kuta-windows-mingw-x64.zip
+            kuta-windows-msvc-x64.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
