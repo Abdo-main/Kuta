@@ -1,3 +1,9 @@
+# CI-specific options
+if(DEFINED ENV{CI})
+    message(STATUS "Building in CI environment")
+    set(ENABLE_TESTING ON)
+endif()
+
 if (WIN32)
 set(CMAKE_TOOLCHAIN_FILE "G:/vcpkg/scripts/buildsystems/vcpkg.cmake")
 endif()
