@@ -1,278 +1,385 @@
-# Kuta 3D Renderer - Development Roadmap
+# Kuta 3D Renderer - ECS Development Roadmap
 
-A structured approach to building a complete 3D rendering framework.
+A structured approach to building a complete 3D rendering framework using Entity-Component-System architecture.
 
 ## Table of Contents
 
-- [Phase 1: Scene Management](#phase-1-scene-management)
-- [Phase 2: Dynamic Resource System](#phase-2-dynamic-resource-system)
-- [Phase 3: Camera API](#phase-3-camera-api)
-- [Phase 4: Render Commands](#phase-4-render-commands)
-- [Phase 5: Transform System](#phase-5-transform-system)
+- [Phase 1: Core ECS Foundation](#phase-1-core-ecs-foundation)
+- [Phase 2: Transform & Rendering Components](#phase-2-transform--rendering-components)
+- [Phase 3: Dynamic Resource System](#phase-3-dynamic-resource-system)
+- [Phase 4: Camera System](#phase-4-camera-system)
+- [Phase 5: Render System](#phase-5-render-system)
 - [Future Enhancements](#future-enhancements)
 
 ---
 
-## Phase 1: Scene Management
+## Phase 1: Core ECS Foundation
 
 > **Priority: CRITICAL** - This is the foundation for all other systems
 
 ### Current Problem
 
 - Models are hardcoded by index
-- No way to position/transform objects individually
+- No flexible entity management
 - Scene composition is inflexible
 
 ### Implementation Steps
 
-#### 1.1 Create GameObject Structure
+#### 1.1 Create Core ECS Structures
 
 ```c
+// Maximum entities and components
+#define MAX_ENTITIES 1024
+#define MAX_COMPONENT_TYPES 32
+
+// Entity is just an ID
+typedef uint32_t Entity;
+
+// Component type enumeration
+typedef enum {
+    COMPONENT_TRANSFORM = 0,
+    COMPONENT_MESH_RENDERER,
+    COMPONENT_CAMERA,
+    COMPONENT_VISIBILITY,
+    COMPONENT_COUNT
+} ComponentType;
+
+// Component signature (bitset)
+typedef uint64_t ComponentSignature;
+
+// ECS World structure
 typedef struct {
-    int id;
-    int model_id;
-    int texture_id;
+    Entity entities[MAX_ENTITIES];
+    ComponentSignature signatures[MAX_ENTITIES];
+    void* component_pools[COMPONENT_COUNT];
+    size_t component_sizes[COMPONENT_COUNT];
+    uint32_t entity_count;
+    uint32_t next_entity_id;
+} World;
+```
+
+#### 1.2 Component Definitions
+
+```c
+// Transform Component
+typedef struct {
     vec3 position;
-    vec3 rotation;
+    vec3 rotation;  // Euler angles in radians
     vec3 scale;
-    bool visible;
-    bool dirty;  // For transform updates
-} GameObject;
+    bool dirty;     // Needs matrix recalculation
+    mat4 matrix;    // Cached world matrix
+} TransformComponent;
 
+// Mesh Renderer Component
 typedef struct {
-    GameObject* objects;
-    int count;
-    int capacity;
-    int next_id;
-} Scene;
+    uint32_t model_id;
+    uint32_t texture_id;
+} MeshRendererComponent;
+
+// Visibility Component
+typedef struct {
+    bool visible;
+    float alpha;
+} VisibilityComponent;
 ```
 
-#### 1.2 Add Scene Functions to API
+#### 1.3 Core ECS Functions
 
 ```c
-// kuta.h additions
-int create_object(int model_id, int texture_id, vec3 position);
-void destroy_object(int object_id);
-void set_object_position(int object_id, vec3 position);
-void set_object_rotation(int object_id, vec3 rotation);
-void set_object_scale(int object_id, vec3 scale);
-void set_object_visible(int object_id, bool visible);
-void clear_scene(void);
+// World management
+void world_init(World* world);
+void world_cleanup(World* world);
+
+// Entity management
+Entity create_entity(World* world);
+void destroy_entity(World* world, Entity entity);
+bool entity_exists(World* world, Entity entity);
+
+// Component management
+void add_component(World* world, Entity entity, ComponentType type, void* component);
+void remove_component(World* world, Entity entity, ComponentType type);
+void* get_component(World* world, Entity entity, ComponentType type);
+bool has_component(World* world, Entity entity, ComponentType type);
+
+// Component signature helpers
+#define COMPONENT_SIGNATURE(type) (1ULL << (type))
+ComponentSignature get_entity_signature(World* world, Entity entity);
 ```
-
-#### 1.3 Update Render Loop
-
-- Modify `record_command_buffer()` to iterate through scene objects
-- Apply per-object transforms via uniform buffers or push constants
-- Skip invisible objects
 
 #### 1.4 Expected User Experience
 
 ```c
-kuta_init(&settings);
-int model = load_model("player.glb");
-int texture = load_texture("player.png");
+World world;
+world_init(&world);
 
-int player = create_object(model, texture, (vec3){0, 0, 0});
-set_object_scale(player, (vec3){2, 2, 2});
+// Create an entity with transform and mesh renderer
+Entity player = create_entity(&world);
 
-while (running()) {
-    begin_frame();
-    // Objects render automatically based on scene
-    end_frame();
-}
+TransformComponent transform = {
+    .position = {0.0f, 0.0f, 0.0f},
+    .rotation = {0.0f, 0.0f, 0.0f},
+    .scale = {1.0f, 1.0f, 1.0f},
+    .dirty = true
+};
+add_component(&world, player, COMPONENT_TRANSFORM, &transform);
+
+MeshRendererComponent renderer = {
+    .model_id = player_model,
+    .texture_id = player_texture
+};
+add_component(&world, player, COMPONENT_MESH_RENDERER, &renderer);
+
+VisibilityComponent visibility = {.visible = true, .alpha = 1.0f};
+add_component(&world, player, COMPONENT_VISIBILITY, &visibility);
 ```
 
 ---
 
-## Phase 2: Dynamic Resource System
+## Phase 2: Transform & Rendering Components
+
+> **Priority: CRITICAL** - Core rendering functionality
+
+### Implementation Steps
+
+#### 2.1 Transform System
+
+```c
+// System for updating transform matrices
+void transform_system_update(World* world);
+
+// Query entities with transform components
+typedef struct {
+    Entity entities[MAX_ENTITIES];
+    TransformComponent* transforms;
+    uint32_t count;
+} TransformQuery;
+
+TransformQuery query_transforms(World* world);
+```
+
+#### 2.2 Rendering System
+
+```c
+// System for rendering mesh components
+void render_system_draw(World* world, VkCommandBuffer cmd_buffer);
+
+// Query for renderable entities
+typedef struct {
+    Entity entities[MAX_ENTITIES];
+    TransformComponent* transforms;
+    MeshRendererComponent* renderers;
+    VisibilityComponent* visibility;
+    uint32_t count;
+} RenderQuery;
+
+RenderQuery query_renderables(World* world);
+```
+
+#### 2.3 Helper Functions for Components
+
+```c
+// Transform helpers
+void set_entity_position(World* world, Entity entity, vec3 position);
+void set_entity_rotation(World* world, Entity entity, vec3 rotation);
+void set_entity_scale(World* world, Entity entity, vec3 scale);
+vec3 get_entity_position(World* world, Entity entity);
+vec3 get_entity_forward(World* world, Entity entity);
+
+// Rendering helpers
+void set_entity_model(World* world, Entity entity, uint32_t model_id);
+void set_entity_texture(World* world, Entity entity, uint32_t texture_id);
+void set_entity_visibility(World* world, Entity entity, bool visible);
+```
+
+#### 2.4 Expected User Experience
+
+```c
+while (running()) {
+    begin_frame();
+
+    // Update all transform matrices
+    transform_system_update(&world);
+
+    // Render all visible entities
+    render_system_draw(&world, command_buffer);
+
+    end_frame();
+}
+
+// Move entities around
+set_entity_position(&world, player, (vec3){5.0f, 0.0f, 0.0f});
+set_entity_rotation(&world, enemy, (vec3){0.0f, time * 2.0f, 0.0f});
+```
+
+---
+
+## Phase 3: Dynamic Resource System
 
 > **Priority: HIGH** - Removes hardcoded limitations
 
 ### Current Problem
 
-- Fixed array sizes (MODELS_COUNT, TEXTURE_COUNT)
-- No way to load resources at runtime
+- Fixed array sizes for models/textures
+- No runtime resource loading
 - Memory waste for unused slots
 
 ### Implementation Steps
 
-#### 2.1 Dynamic Resource Arrays
+#### 3.1 Resource Components
 
 ```c
+// Resource handle component (for sharing resources)
+typedef struct {
+    uint32_t resource_id;
+    uint32_t ref_count;
+} ResourceHandle;
+
+// Material component (combines texture + properties)
+typedef struct {
+    uint32_t diffuse_texture;
+    uint32_t normal_texture;
+    vec3 color_tint;
+    float metallic;
+    float roughness;
+} MaterialComponent;
+```
+
+#### 3.2 Resource Management System
+
+```c
+// Resource manager (global)
 typedef struct {
     GeometryData* geometries;
     TextureData* textures;
-    VkBuffer* vertex_buffers;
-    VkDeviceMemory* vertex_memory;
-    VkBuffer* index_buffers;
-    VkDeviceMemory* index_memory;
+    MaterialData* materials;
 
-    int model_count;
-    int model_capacity;
-    int texture_count;
-    int texture_capacity;
+    uint32_t geometry_count;
+    uint32_t geometry_capacity;
+    uint32_t texture_count;
+    uint32_t texture_capacity;
+    uint32_t material_count;
+    uint32_t material_capacity;
 
-    int* free_model_slots;    // For reusing IDs
-    int* free_texture_slots;
+    // Free lists for ID reuse
+    uint32_t* free_geometry_ids;
+    uint32_t* free_texture_ids;
+    uint32_t* free_material_ids;
 } ResourceManager;
+
+// Resource loading system
+uint32_t load_geometry(const char* filepath);
+uint32_t load_texture(const char* filepath);
+uint32_t create_material(uint32_t diffuse_tex, vec3 color);
+void unload_resource(uint32_t resource_id, ComponentType type);
 ```
 
-#### 2.2 Resource Management Functions
+#### 3.3 Expected User Experience
 
 ```c
-// Replace current loading functions
-int load_model(const char* filepath);
-int load_texture(const char* filepath);
-void unload_model(int model_id);
-void unload_texture(int texture_id);
-bool is_model_valid(int model_id);
-bool is_texture_valid(int texture_id);
-```
-
-#### 2.3 Update Initialization
-
-- Remove hardcoded model/texture loading from `main()`
-- Resources loaded on-demand
-- Automatic memory expansion when needed
-
-#### 2.4 Expected User Experience
-
-```c
-kuta_init(&settings);
+world_init(&world);
 
 // Load resources dynamically
-int player_model = load_model("./models/player.glb");
-int enemy_model = load_model("./models/enemy.glb");
-int grass_texture = load_texture("./textures/grass.png");
+uint32_t player_mesh = load_geometry("./models/player.glb");
+uint32_t player_tex = load_texture("./textures/player.png");
+uint32_t player_mat = create_material(player_tex, (vec3){1.0f, 1.0f, 1.0f});
 
-// Resources can be shared across objects
-int player1 = create_object(player_model, grass_texture, (vec3){-2, 0, 0});
-int player2 = create_object(player_model, grass_texture, (vec3){2, 0, 0});
-```
+// Create multiple entities with shared resources
+for (int i = 0; i < 10; i++) {
+    Entity soldier = create_entity(&world);
 
----
+    TransformComponent transform = {
+        .position = {i * 2.0f, 0.0f, 0.0f},
+        .scale = {1.0f, 1.0f, 1.0f}
+    };
+    add_component(&world, soldier, COMPONENT_TRANSFORM, &transform);
 
-## Phase 3: Camera API
-
-> **Priority: MEDIUM** - Essential for user control
-
-### Current Problem
-
-- Camera input hardcoded in callbacks
-- No programmatic camera control
-- Users can't customize camera behavior
-
-### Implementation Steps
-
-#### 3.1 Camera Control Functions
-
-```c
-void set_camera_position(vec3 position);
-void set_camera_rotation(float yaw, float pitch);
-void set_camera_target(vec3 target);  // Look-at style
-void set_camera_fov(float fov_degrees);
-void set_camera_near_far(float near, float far);
-
-// For advanced users
-Camera* get_camera(void);
-void set_camera_mode(CameraMode mode);  // FPS, ORBITAL, FIXED
-```
-
-#### 3.2 Camera Modes
-
-```c
-typedef enum {
-    CAMERA_MODE_FPS,      // Current behavior
-    CAMERA_MODE_ORBITAL,  // Rotate around target
-    CAMERA_MODE_FIXED,    // No input processing
-    CAMERA_MODE_FREE      // Free movement
-} CameraMode;
-```
-
-#### 3.3 Input System Refactor
-
-- Separate input processing from camera updates
-- Allow users to disable automatic input handling
-- Add custom input binding support
-
-#### 3.4 Expected User Experience
-
-```c
-// Set initial camera
-set_camera_position((vec3){0, 5, 10});
-set_camera_target((vec3){0, 0, 0});
-
-while (running()) {
-    begin_frame();
-
-    // Programmatic camera control
-    float time = glfwGetTime();
-    set_camera_position((vec3){cos(time) * 10, 5, sin(time) * 10});
-
-    end_frame();
+    MeshRendererComponent renderer = {
+        .model_id = player_mesh,
+        .texture_id = player_tex
+    };
+    add_component(&world, soldier, COMPONENT_MESH_RENDERER, &renderer);
 }
 ```
 
 ---
 
-## Phase 4: Render Commands
+## Phase 4: Camera System
 
-> **Priority: MEDIUM** - Flexibility for complex scenes
-
-### Current Problem
-
-- All objects rendered automatically
-- No control over render order
-- No way to do custom rendering
+> **Priority: MEDIUM** - Essential for view control
 
 ### Implementation Steps
 
-#### 4.1 Render Queue System
+#### 4.1 Camera Component
 
 ```c
 typedef enum {
-    RENDER_CMD_DRAW_OBJECT,
-    RENDER_CMD_DRAW_MODEL_AT,
-    RENDER_CMD_SET_CLEAR_COLOR,
-    RENDER_CMD_SET_WIREFRAME
-} RenderCommandType;
+    CAMERA_PROJECTION_PERSPECTIVE,
+    CAMERA_PROJECTION_ORTHOGRAPHIC
+} CameraProjection;
 
 typedef struct {
-    RenderCommandType type;
-    union {
-        struct { int object_id; } draw_object;
-        struct { int model_id; vec3 pos; vec3 rot; vec3 scale; } draw_model;
-        struct { float r, g, b, a; } clear_color;
-    } data;
-} RenderCommand;
+    CameraProjection projection;
+    float fov;          // For perspective
+    float near_plane;
+    float far_plane;
+    float ortho_size;   // For orthographic
+    bool is_main;       // Main camera flag
+    mat4 view_matrix;
+    mat4 proj_matrix;
+} CameraComponent;
 ```
 
-#### 4.2 Command Functions
+#### 4.2 Camera System
 
 ```c
-void clear_render_queue(void);
-void draw_object(int object_id);
-void draw_model_at(int model_id, vec3 position, vec3 rotation, vec3 scale);
-void set_clear_color(float r, float g, float b);
-void set_wireframe_mode(bool enabled);
+// Camera system update
+void camera_system_update(World* world, uint32_t window_width, uint32_t window_height);
 
-// Advanced: custom sorting
-void set_render_mode(RenderMode mode);  // IMMEDIATE, DEFERRED
+// Camera queries
+typedef struct {
+    Entity entities[MAX_ENTITIES];
+    TransformComponent* transforms;
+    CameraComponent* cameras;
+    uint32_t count;
+} CameraQuery;
+
+CameraQuery query_cameras(World* world);
+CameraComponent* get_main_camera(World* world);
 ```
 
-#### 4.3 Expected User Experience
+#### 4.3 Camera Helper Functions
 
 ```c
+// Camera creation helpers
+Entity create_fps_camera(World* world, vec3 position);
+Entity create_orbital_camera(World* world, vec3 target, float distance);
+
+// Camera control
+void set_camera_fov(World* world, Entity camera, float fov);
+void set_camera_target(World* world, Entity camera, vec3 target);
+void move_camera(World* world, Entity camera, vec3 delta);
+```
+
+#### 4.4 Expected User Experience
+
+```c
+// Create main camera
+Entity main_cam = create_fps_camera(&world, (vec3){0.0f, 5.0f, 10.0f});
+
 while (running()) {
     begin_frame();
 
-    set_clear_color(0.2, 0.3, 0.8);
+    // Update camera matrices
+    camera_system_update(&world, window_width, window_height);
 
-    // Explicit rendering control
-    draw_object(background);
-    draw_object(player);
-    draw_model_at(bullet_model, bullet_pos, bullet_rot, bullet_scale);
+    // Move camera programmatically
+    float time = glfwGetTime();
+    vec3 cam_pos = {cos(time) * 10.0f, 5.0f, sin(time) * 10.0f};
+    set_entity_position(&world, main_cam, cam_pos);
+
+    // Systems update
+    transform_system_update(&world);
+    render_system_draw(&world, command_buffer);
 
     end_frame();
 }
@@ -280,79 +387,127 @@ while (running()) {
 
 ---
 
-## Phase 5: Transform System
+## Phase 5: Render System
 
-> **Priority: LOW** - Nice-to-have math utilities
+> **Priority: MEDIUM** - Advanced rendering features
 
 ### Implementation Steps
 
-#### 5.1 Math Library
+#### 5.1 Render Command Components
 
 ```c
-// Vector operations
-vec3 vec3_add(vec3 a, vec3 b);
-vec3 vec3_multiply(vec3 v, float scalar);
-float vec3_length(vec3 v);
-vec3 vec3_normalize(vec3 v);
+// Render command component for custom rendering
+typedef enum {
+    RENDER_LAYER_BACKGROUND = 0,
+    RENDER_LAYER_OPAQUE = 100,
+    RENDER_LAYER_TRANSPARENT = 200,
+    RENDER_LAYER_UI = 300
+} RenderLayer;
 
-// Matrix operations
-mat4 mat4_identity(void);
-mat4 mat4_translate(vec3 position);
-mat4 mat4_rotate_xyz(vec3 rotation);
-mat4 mat4_scale(vec3 scale);
-mat4 mat4_multiply(mat4 a, mat4 b);
+typedef struct {
+    RenderLayer layer;
+    uint32_t sort_order;
+    bool cast_shadows;
+    bool receive_shadows;
+} RenderComponent;
 ```
 
-#### 5.2 Transform Helpers
+#### 5.2 Advanced Render System
 
 ```c
-void move_object(int object_id, vec3 delta);
-void rotate_object(int object_id, vec3 delta_rotation);
-void scale_object(int object_id, float scale_factor);
-vec3 get_object_forward(int object_id);
+// Render system with sorting
+void render_system_collect_commands(World* world);
+void render_system_sort_commands(void);
+void render_system_execute_commands(VkCommandBuffer cmd_buffer);
+
+// Render queries with filtering
+typedef struct {
+    ComponentSignature required;
+    ComponentSignature excluded;
+    RenderLayer layer_filter;
+} RenderFilter;
+
+uint32_t query_entities_filtered(World* world, RenderFilter filter, Entity* out_entities);
+```
+
+#### 5.3 Expected User Experience
+
+```c
+// Create entities with different render layers
+Entity background = create_entity(&world);
+add_component(&world, background, COMPONENT_TRANSFORM, &bg_transform);
+add_component(&world, background, COMPONENT_MESH_RENDERER, &bg_renderer);
+RenderComponent bg_render = {.layer = RENDER_LAYER_BACKGROUND, .sort_order = 0};
+add_component(&world, background, COMPONENT_RENDER, &bg_render);
+
+Entity ui_element = create_entity(&world);
+// ... setup ui entity
+RenderComponent ui_render = {.layer = RENDER_LAYER_UI, .sort_order = 10};
+add_component(&world, ui_element, COMPONENT_RENDER, &ui_render);
+
+while (running()) {
+    begin_frame();
+
+    // Collect and sort render commands by layer and sort order
+    render_system_collect_commands(&world);
+    render_system_sort_commands();
+    render_system_execute_commands(command_buffer);
+
+    end_frame();
+}
 ```
 
 ---
 
 ## Future Enhancements
 
-### Rendering Features
+### Additional Components
 
-- [ ] Multiple lights support
-- [ ] Shadow mapping
-- [ ] Post-processing pipeline
-- [ ] Instanced rendering
-- [ ] Level-of-detail (LOD)
+- [ ] Animation Component (bone transforms, keyframes)
+- [ ] Physics Component (rigidbody, collider)
+- [ ] Audio Component (3D positioned sound)
+- [ ] Light Component (point, directional, spot)
+- [ ] Particle Component (emitters, systems)
 
-### Performance
+### Advanced Systems
 
-- [ ] Frustum culling
-- [ ] Occlusion culling
+- [ ] Animation System (skeletal animation)
+- [ ] Physics System (collision detection/response)
+- [ ] Audio System (3D positional audio)
+- [ ] Lighting System (shadow mapping, GI)
+- [ ] Culling System (frustum, occlusion)
+- [ ] LOD System (level-of-detail switching)
+
+### Performance Features
+
+- [ ] Component archetype optimization
+- [ ] System parallelization
 - [ ] GPU-driven rendering
-- [ ] Multithreaded command recording
+- [ ] Instancing system for similar entities
 
-### Assets
+### Developer Tools
 
-- [ ] Material system
-- [ ] Animation support
-- [ ] Texture atlasing
-- [ ] Compressed texture formats
-
-### Developer Experience
-
-- [ ] Debug rendering (wireframes, normals)
-- [ ] Performance profiler
-- [ ] Hot-reloading of shaders/assets
-- [ ] Error reporting improvements
+- [ ] Entity inspector/debugger
+- [ ] Component serialization (save/load scenes)
+- [ ] Hot-reloading components
+- [ ] Performance profiler for systems
 
 ---
 
 ## Implementation Order
 
-1. **Week 1-2**: Scene Management (Phase 1)
-2. **Week 3**: Dynamic Resources (Phase 2)
-3. **Week 4**: Camera API (Phase 3)
-4. **Week 5**: Render Commands (Phase 4)
-5. **Week 6**: Transform System (Phase 5)
+1. **Week 1**: Core ECS Foundation (Phase 1)
+2. **Week 2**: Transform & Rendering Components (Phase 2)
+3. **Week 3**: Dynamic Resource System (Phase 3)
+4. **Week 4**: Camera System (Phase 4)
+5. **Week 5**: Render System (Phase 5)
 
-Each phase should be fully tested before moving to the next. Focus on getting Phase 1 working perfectly as it's the foundation for everything else.
+### Key ECS Principles
+
+- **Entities** are just IDs - no behavior, just containers for components
+- **Components** are pure data - no methods, just state
+- **Systems** contain all logic - operate on entities with specific component combinations
+- **Queries** efficiently find entities with required component signatures
+- **Composition over inheritance** - mix and match components to create different entity types
+
+Each phase should be fully tested with the ECS architecture before moving to the next. The ECS approach will make your engine much more flexible and performant than traditional OOP approaches.
