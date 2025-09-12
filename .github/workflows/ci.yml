@@ -40,7 +40,7 @@ jobs:
           xvfb 
     
     - name: Setup Vulkan SDK
-      run: |
+    run: |
       # Use modern apt keyring method
       wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
       sudo chmod 644 /etc/apt/trusted.gpg.d/lunarg.asc
@@ -48,7 +48,6 @@ jobs:
       sudo apt update
       # Install only essential Vulkan SDK components (avoid problematic packages)
       sudo apt install vulkan-sdk-core vulkan-tools glslang-tools spirv-tools 
-    
     - name: Configure CMake
       run: cmake -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
     
