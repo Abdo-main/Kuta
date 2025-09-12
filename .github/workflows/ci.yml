@@ -142,8 +142,8 @@ jobs:
           # Copy GLFW DLL
           cp /mingw64/bin/libglfw-3.dll . 2>/dev/null || echo "libglfw-3.dll not found, might be static"
 
-          # Copy Vulkan loader
-          cp /mingw64/bin/libvulkan-1.dll .
+          # Copy Vulkan loader from Vulkan SDK (not MSYS2)
+          cp "/c/VulkanSDK/$VULKAN_SDK_VERSION/Bin/vulkan-1.dll" . 2>/dev/null || echo "vulkan-1.dll not found in Vulkan SDK"
 
           # Copy assimp DLL
           cp /mingw64/bin/libassimp-5.dll . 2>/dev/null || cp /mingw64/bin/libassimp.dll . 2>/dev/null || echo "assimp DLL not found"
@@ -156,6 +156,14 @@ jobs:
             if [ -f "$dll" ]; then
               cp "$dll" .
               echo "Copied dependency: $(basename "$dll")"
+            fi
+          done
+
+          # Also check for dependencies in Windows system paths that ldd might show
+          for dll in $(ldd kuta.exe | grep -i windows | awk '{print $3}'); do
+            if [ -f "$dll" ]; then
+              cp "$dll" .
+              echo "Copied system dependency: $(basename "$dll")"
             fi
           done
 
