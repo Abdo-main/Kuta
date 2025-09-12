@@ -12,7 +12,7 @@
 
 int main(void) {
     Settings settings = {
-        .api_version = VK_API_VERSION_1_4,
+        .api_version = VK_API_VERSION_1_3,
         .application_name = "Kudo",
         .engine_name = "Kuta",
         .background_color = (VkClearColorValue){1.0f, 1.5f, 1.0f},
