@@ -32,11 +32,12 @@ jobs:
           libglfw3-dev \
           libvulkan-dev \
           vulkan-tools \
-          vulkan-validationlayers-dev \
+          spirv-tools \
           mesa-vulkan-drivers \
+          vulkan-validationlayers \
           libcglm-dev \
           libassimp-dev \
-          xvfb
+          xvfb 
     
     - name: Setup Vulkan SDK
       run: |
@@ -120,7 +121,9 @@ jobs:
         export VULKAN_SDK="/c/VulkanSDK/$VULKAN_SDK_VERSION"
         mkdir -p build-mingw
         cd build-mingw
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+          -DCMAKE_C_COMPILER=gcc \
+          -DCMAKE_MAKE_PROGRAM=mingw32-make
         mingw32-make -j$(nproc)
     
     - name: Verify build output
@@ -232,3 +235,4 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
