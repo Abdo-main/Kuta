@@ -166,13 +166,30 @@ jobs:
               echo "Copied system dependency: $(basename "$dll")"
             fi
           done
-      - name: Copy models and textures
+      - name: Copy models and textures to build directory
         shell: msys2 {0}
         run: |
-          echo "Copying models and textures..."
-          cd build-mingw
-          cp -r ../models .
-          cp -r ../textures .
+          echo "Current directory: $(pwd)"
+          echo "Repository contents:"
+          ls -la
+          echo "Build directory contents before copy:"
+          ls -la build-mingw/ || echo "build-mingw doesn't exist yet"
+
+          # Ensure build directory exists
+          mkdir -p build-mingw
+
+          # Copy assets with verbose output
+          echo "Copying models..."
+          cp -rv ../models build-mingw/ 2>/dev/null || cp -rv ./models build-mingw/ || echo "Models copy failed"
+          echo "Copying textures..."
+          cp -rv ../textures build-mingw/ 2>/dev/null || cp -rv ./textures build-mingw/ || echo "Textures copy failed"
+
+          echo "Build directory contents after copy:"
+          ls -la build-mingw/
+          echo "Models in build directory:"
+          ls -la build-mingw/models/ 2>/dev/null || echo "No models directory found"
+          echo "Textures in build directory:"
+          ls -la build-mingw/textures/ 2>/dev/null || echo "No textures directory found"
 
       - name: Verify build output
         shell: msys2 {0}

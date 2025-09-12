@@ -1,8 +1,8 @@
+#include <GLFW/glfw3.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <vulkan/vulkan.h>
-#include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
-#include <stdbool.h>
 
 #include "kuta.h"
 #include "main.h"
@@ -11,40 +11,40 @@
 #define TEXTURE_COUNT 2
 
 int main(void) {
-    Settings settings = {
-        .api_version = VK_API_VERSION_1_3,
-        .application_name = "Kudo",
-        .engine_name = "Kuta",
-        .background_color = (VkClearColorValue){1.0f, 1.5f, 1.0f},
-        .window_width = 800,
-        .window_height = 600,
-        .window_title = "Hello, Kuta Library!!!",
-        .models_count = 1,
-    };
- 
-    const char* models_files[MODELS_COUNT] = {
-        "./models/aatrox.glb",
-    };
+  Settings settings = {
+      .api_version = VK_API_VERSION_1_3,
+      .application_name = "Kudo",
+      .engine_name = "Kuta",
+      .background_color = (VkClearColorValue){1.0f, 1.5f, 1.0f},
+      .window_width = 800,
+      .window_height = 600,
+      .window_title = "Hello, Kuta Library!!!",
+      .models_count = 1,
+  };
 
-    const char* textures_files[TEXTURE_COUNT] = {
-        "./textures/Body-Aatrox.png",
-    }; 
+  const char *models_files[MODELS_COUNT] = {
+      "./models/aatrox.glb",
+  };
 
-    kuta_init(&settings);
+  const char *textures_files[TEXTURE_COUNT] = {
+      "./textures/Body-Aatrox.png",
+  };
 
-    renderer_init();
+  kuta_init(&settings);
 
-    load_texture(textures_files);
-    load_glbs(models_files);
+  renderer_init();
 
-    renderer_deinit();
+  load_texture(textures_files);
+  load_glbs(models_files);
 
-    while (running()) {
-        begin_frame();
-        end_frame();
-    }
+  renderer_deinit();
 
-    kuta_deinit();
- 
-    return EXIT_SUCCESS;
+  while (running()) {
+    begin_frame();
+    end_frame();
+  }
+
+  kuta_deinit();
+
+  return EXIT_SUCCESS;
 }
