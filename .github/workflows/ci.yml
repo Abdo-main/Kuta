@@ -166,6 +166,13 @@ jobs:
               echo "Copied system dependency: $(basename "$dll")"
             fi
           done
+      - name: Copy models and textures
+        shell: msys2 {0}
+        run: |
+          echo "Copying models and textures..."
+          cd build-mingw
+          cp -r ../models .
+          cp -r ../textures .
 
       - name: Verify build output
         shell: msys2 {0}
