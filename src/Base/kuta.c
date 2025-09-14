@@ -1,155 +1,414 @@
-#include <stddef.h>
-#include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan_core.h>
+#include <cglm/cglm.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
-#include "main.h"
 #include "camera.h"
-#include "textures.h"
-#include "window.h"
-#include "swapchain.h"
-#include "vulkan_core.h"
+#include "descriptors.h"
+#include "kuta.h"
+#include "main.h"
+#include "models.h"
 #include "renderer.h"
+#include "swapchain.h"
+#include "textures.h"
 #include "utils.h"
 #include "vertex_data.h"
-#include "descriptors.h"
-#include "models.h"
+#include "vulkan_core.h"
+#include "window.h"
 
-static KutaContext* kuta_context = NULL;
+static KutaContext *kuta_context = NULL;
 
-bool kuta_init(Settings *settings){
-       if (kuta_context != NULL) {
-        return false;
+void world_init(World *world) {
+  memset(world, 0, sizeof(World));
+
+  world->component_pools[COMPONENT_TRANSFORM] =
+      malloc(sizeof(TransformComponent) * MAX_ENTITIES);
+  world->component_pools[COMPONENT_MESH_RENDERER] =
+      malloc(sizeof(MeshRendererComponent) * MAX_ENTITIES);
+  world->component_pools[COMPONENT_VISIBILITY] = // ADD THIS
+      malloc(sizeof(VisibilityComponent) * MAX_ENTITIES);
+
+  world->component_sizes[COMPONENT_TRANSFORM] = sizeof(TransformComponent);
+  world->component_sizes[COMPONENT_MESH_RENDERER] =
+      sizeof(MeshRendererComponent);
+  world->component_sizes[COMPONENT_VISIBILITY] =
+      sizeof(VisibilityComponent); // ADD THIS
+
+  world->entity_count = 0;
+  world->next_entity_id = 1;
+}
+
+void world_cleanup(World *world) {
+  for (int i = 0; i < COMPONENT_COUNT; i++) {
+    if (world->component_pools[i]) {
+      free(world->component_pools[i]);
+      world->component_pools[i] = NULL;
     }
-    kuta_context = calloc(1, sizeof(KutaContext)); // Use calloc instead of malloc
-    if (!kuta_context) return false; 
-
-    setup_error_handling();
-    log_info();
-
-    kuta_context->state.window_data.width = settings->window_width;
-    kuta_context->state.window_data.height = settings->window_height;
-    kuta_context->state.window_data.title = settings->window_title;
-    kuta_context->state.vk_core.api_version = settings->api_version;
-    kuta_context->settings.background_color = settings->background_color;
-    kuta_context->models.model_count = settings->models_count;
-    
-    create_window(&kuta_context->state.window_data);
-    // Set the state as window user pointer so callbacks can access it
-    glfwSetWindowUserPointer(kuta_context->state.window_data.window, &kuta_context->state);
-
-    // Initialize input state
-    kuta_context->state.input_state.firstMouse = true;
-    kuta_context->state.input_state.lastX = kuta_context->state.window_data.width / 2.0f;
-    kuta_context->state.input_state.lastY = kuta_context->state.window_data.height / 2.0f;
-
-    // Set callbacks
-    glfwSetKeyCallback(kuta_context->state.window_data.window, key_callback);
-    glfwSetCursorPosCallback(kuta_context->state.window_data.window, mouse_callback);
-    glfwSetInputMode(kuta_context->state.window_data.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    camera_init(&kuta_context->state.input_state.camera);    
-    init_vk(&kuta_context->settings, &kuta_context->state);
-
-    create_swapchain(&kuta_context->state); 
-
-    return true;
+  }
+  memset(world, 0, sizeof(World));
 }
 
-void renderer_init(void){
-    alloc_model_data(&kuta_context->models);
-    create_render_pass(&kuta_context->state);
-    create_descriptor_set_layout(&kuta_context->state);
-    create_graphics_pipeline(&kuta_context->state);
-    create_command_pool(&kuta_context->state);
-    create_depth_resources(&kuta_context->state);
-    create_frame_buffers(&kuta_context->state);
+Entity create_entity(World *world) {
+  if (world->entity_count >= MAX_ENTITIES) {
+    return 0;
+  }
+
+  Entity new_entity = world->next_entity_id++;
+
+  world->entities[world->entity_count] = new_entity;
+  world->entity_count++;
+
+  world->signatures[new_entity] = 0;
+
+  return new_entity;
 }
 
-void renderer_deinit(void){
-    create_descriptor_pool(&kuta_context->state, &kuta_context->models);
-    create_uniform_buffers(&kuta_context->state, &kuta_context->buffer_data);
-    create_descriptor_sets(&kuta_context->buffer_data, &kuta_context->models, &kuta_context->state);
-    allocate_command_buffer(&kuta_context->state);
-    create_sync_objects(&kuta_context->state);
+bool entity_exists(World *world, Entity entity) {
+  // Check if entity is within valid range
+  if (entity == 0 || entity >= world->next_entity_id) {
+    return false;
+  }
+
+  // Search through the entities array to see if this entity exists
+  for (uint32_t i = 0; i < world->entity_count; i++) {
+    if (world->entities[i] == entity) {
+      return true;
+    }
+  }
+  return false;
 }
 
-void load_glbs(const char* models_files[]){
-   load_models(models_files, &kuta_context->models, kuta_context->models.model_count, &kuta_context->buffer_data, &kuta_context->state); 
+void add_component(World *world, Entity entity, ComponentType type,
+                   void *component) {
+  if (!entity_exists(world, entity))
+    return;
+
+  void *pool = world->component_pools[type];
+  size_t component_size = world->component_sizes[type];
+
+  void *destination = (char *)pool + (entity * component_size);
+
+  memcpy(destination, component, component_size);
+
+  world->signatures[entity] |= (1ULL << type);
 }
 
-void load_texture(const char* textures_files[]){
-    load_textures(&kuta_context->models, &kuta_context->state, textures_files);
+void *get_component(World *world, Entity entity, ComponentType type) {
+  if (!(world->signatures[entity] & (1ULL << type))) {
+    return NULL;
+  }
+
+  void *pool = world->component_pools[type];
+  size_t component_size = world->component_sizes[type];
+
+  return (char *)pool + (entity * component_size);
+}
+
+void transform_system_update(World *world) {
+  for (uint32_t i = 0; i < world->entity_count; i++) {
+    Entity entity = world->entities[i];
+
+    if (!(world->signatures[entity] &
+          COMPONENT_SIGNATURE(COMPONENT_TRANSFORM))) {
+      continue;
+    }
+
+    TransformComponent *transform =
+        get_component(world, entity, COMPONENT_TRANSFORM);
+
+    if (transform->dirty) {
+      // Use cglm functions to build transform matrix
+      mat4 translation_matrix, rotation_matrix, scale_matrix;
+
+      // Create individual transformation matrices
+      glm_translate_make(translation_matrix, transform->position);
+      glm_euler_xyz(transform->rotation, rotation_matrix);
+      glm_scale_make(scale_matrix, transform->scale);
+
+      // Combine: Translation * Rotation * Scale
+      mat4 temp;
+      glm_mat4_mul(rotation_matrix, scale_matrix, temp);
+      glm_mat4_mul(translation_matrix, temp, transform->matrix);
+
+      transform->dirty = false;
+    }
+  }
+}
+
+void set_entity_position(World *world, Entity entity, vec3 position) {
+  TransformComponent *transform =
+      get_component(world, entity, COMPONENT_TRANSFORM);
+  if (!transform)
+    return;
+
+  glm_vec3_copy(position, transform->position); // cglm copy function
+  transform->dirty = true;
+}
+
+void set_entity_rotation(World *world, Entity entity, vec3 rotation) {
+  TransformComponent *transform =
+      get_component(world, entity, COMPONENT_TRANSFORM);
+  if (!transform)
+    return;
+
+  glm_vec3_copy(rotation, transform->rotation);
+  transform->dirty = true;
+}
+
+void set_entity_scale(World *world, Entity entity, vec3 scale) {
+  TransformComponent *transform =
+      get_component(world, entity, COMPONENT_TRANSFORM);
+  if (!transform)
+    return;
+
+  glm_vec3_copy(scale, transform->scale);
+  transform->dirty = true;
+}
+
+// Convenience functions
+void move_entity(World *world, Entity entity, vec3 delta) {
+  TransformComponent *transform =
+      get_component(world, entity, COMPONENT_TRANSFORM);
+  if (!transform)
+    return;
+
+  glm_vec3_add(transform->position, delta, transform->position);
+  transform->dirty = true;
+}
+
+VkBuffer get_model_vertex_buffer(int model_id) {
+  return kuta_context->models.vertex_buffers[model_id];
+}
+
+VkBuffer get_model_index_buffer(int model_id) {
+  return kuta_context->models.index_buffers[model_id];
+}
+
+VkDescriptorSet get_texture_descriptor_set(int texture_id) {
+  size_t frame_index = kuta_context->state.renderer.current_frame;
+  size_t set_index =
+      frame_index * kuta_context->models.model_count + texture_id;
+  return kuta_context->state.renderer.descriptor_sets[set_index];
+}
+
+int get_model_index_count(int model_id) {
+  return kuta_context->models.geometry[model_id].index_count;
+}
+
+void render_system_draw(World *world, VkCommandBuffer cmd_buffer) {
+  ComponentSignature required = COMPONENT_SIGNATURE(COMPONENT_TRANSFORM) |
+                                COMPONENT_SIGNATURE(COMPONENT_MESH_RENDERER) |
+                                COMPONENT_SIGNATURE(COMPONENT_VISIBILITY);
+
+  for (uint32_t i = 0; i < world->entity_count; i++) {
+    Entity entity = world->entities[i];
+
+    if ((world->signatures[entity] & required) != required) {
+      continue;
+    }
+
+    TransformComponent *transform =
+        get_component(world, entity, COMPONENT_TRANSFORM);
+    MeshRendererComponent *renderer =
+        get_component(world, entity, COMPONENT_MESH_RENDERER);
+    VisibilityComponent *visibility =
+        get_component(world, entity, COMPONENT_VISIBILITY);
+
+    if (!visibility->visible || visibility->alpha <= 0.0f) {
+      continue;
+    }
+
+    // Bind vertex/index buffers
+    VkBuffer vertex_buffers[] = {get_model_vertex_buffer(renderer->model_id)};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(cmd_buffer, 0, 1, vertex_buffers, offsets);
+    vkCmdBindIndexBuffer(cmd_buffer, get_model_index_buffer(renderer->model_id),
+                         0, VK_INDEX_TYPE_UINT32);
+
+    VkDescriptorSet descriptor_set =
+        get_texture_descriptor_set(renderer->texture_id);
+
+    vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            kuta_context->state.renderer.pipeline_layout, 0, 1,
+                            &descriptor_set, 0, NULL);
+
+    vkCmdPushConstants(cmd_buffer, kuta_context->state.renderer.pipeline_layout,
+                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mat4),
+                       &transform->matrix);
+
+    uint32_t index_count = get_model_index_count(renderer->model_id);
+    vkCmdDrawIndexed(cmd_buffer, index_count, 1, 0, 0, 0);
+  }
+}
+
+bool kuta_init(Settings *settings) {
+  if (kuta_context != NULL) {
+    return false;
+  }
+  kuta_context = calloc(1, sizeof(KutaContext));
+  if (!kuta_context)
+    return false;
+
+  setup_error_handling();
+  log_info();
+
+  kuta_context->state.window_data.width = settings->window_width;
+  kuta_context->state.window_data.height = settings->window_height;
+  kuta_context->state.window_data.title = settings->window_title;
+  kuta_context->state.vk_core.api_version = settings->api_version;
+  kuta_context->settings.background_color = settings->background_color;
+  kuta_context->models.model_count = settings->models_count;
+
+  create_window(&kuta_context->state.window_data);
+  // Set the state as window user pointer so callbacks can access it
+  glfwSetWindowUserPointer(kuta_context->state.window_data.window,
+                           &kuta_context->state);
+
+  // Initialize input state
+  kuta_context->state.input_state.firstMouse = true;
+  kuta_context->state.input_state.lastX =
+      kuta_context->state.window_data.width / 2.0f;
+  kuta_context->state.input_state.lastY =
+      kuta_context->state.window_data.height / 2.0f;
+
+  // Set callbacks
+  glfwSetKeyCallback(kuta_context->state.window_data.window, key_callback);
+  glfwSetCursorPosCallback(kuta_context->state.window_data.window,
+                           mouse_callback);
+  glfwSetInputMode(kuta_context->state.window_data.window, GLFW_CURSOR,
+                   GLFW_CURSOR_DISABLED);
+
+  camera_init(&kuta_context->state.input_state.camera);
+  init_vk(&kuta_context->settings, &kuta_context->state);
+
+  create_swapchain(&kuta_context->state);
+
+  return true;
+}
+
+void renderer_init(void) {
+  alloc_model_data(&kuta_context->models);
+  create_render_pass(&kuta_context->state);
+  create_descriptor_set_layout(&kuta_context->state);
+  create_graphics_pipeline(&kuta_context->state);
+  create_command_pool(&kuta_context->state);
+  create_depth_resources(&kuta_context->state);
+  create_frame_buffers(&kuta_context->state);
+}
+
+void renderer_deinit(void) {
+  create_descriptor_pool(&kuta_context->state, &kuta_context->models);
+  create_uniform_buffers(&kuta_context->state, &kuta_context->buffer_data);
+  create_descriptor_sets(&kuta_context->buffer_data, &kuta_context->models,
+                         &kuta_context->state);
+  allocate_command_buffer(&kuta_context->state);
+  create_sync_objects(&kuta_context->state);
+}
+
+void load_glbs(const char *models_files[]) {
+  load_models(models_files, &kuta_context->models,
+              kuta_context->models.model_count, &kuta_context->buffer_data,
+              &kuta_context->state);
+}
+
+void load_texture(const char *textures_files[]) {
+  load_textures(&kuta_context->models, &kuta_context->state, textures_files);
 }
 
 float lastFrame = 0.0f;
-void begin_frame(void){
-    float currentFrame = glfwGetTime();
-    float deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;  
+void begin_frame(void) {
+  float currentFrame = glfwGetTime();
+  float deltaTime = currentFrame - lastFrame;
+  lastFrame = currentFrame;
 
-    glfwPollEvents();
+  glfwPollEvents();
 
-    process_input(&kuta_context->state, deltaTime);
+  process_input(&kuta_context->state, deltaTime);
 
-    uint32_t frame = kuta_context->state.renderer.current_frame;
-    vkWaitForFences(kuta_context->state.vk_core.device, 1, &kuta_context->state.renderer.in_flight_fence[frame], VK_TRUE, UINT64_MAX);
-    vkResetFences(kuta_context->state.vk_core.device, 1, &kuta_context->state.renderer.in_flight_fence[frame]);
+  uint32_t frame = kuta_context->state.renderer.current_frame;
+  vkWaitForFences(kuta_context->state.vk_core.device, 1,
+                  &kuta_context->state.renderer.in_flight_fence[frame], VK_TRUE,
+                  UINT64_MAX);
+  vkResetFences(kuta_context->state.vk_core.device, 1,
+                &kuta_context->state.renderer.in_flight_fence[frame]);
 
-    acquire_next_swapchain_image(&kuta_context->state);
-   
+  acquire_next_swapchain_image(&kuta_context->state);
 }
 
-void end_frame(void){
-    record_command_buffer(&kuta_context->buffer_data, &kuta_context->settings, &kuta_context->models, &kuta_context->state);
-    submit_command_buffer(&kuta_context->buffer_data, &kuta_context->state);
-    present_swapchain_image(&kuta_context->models, &kuta_context->state);
+void end_frame(World *world) {
 
-    kuta_context->state.renderer.current_frame = (kuta_context->state.renderer.current_frame + 1) % MAX_FRAMES_IN_FLIGHT; 
+  transform_system_update(world);
+
+  record_command_buffer(&kuta_context->buffer_data, &kuta_context->settings,
+                        &kuta_context->models, &kuta_context->state, world);
+
+  submit_command_buffer(&kuta_context->buffer_data, &kuta_context->state);
+
+  present_swapchain_image(&kuta_context->models, &kuta_context->state);
+
+  kuta_context->state.renderer.current_frame =
+      (kuta_context->state.renderer.current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void kuta_deinit(void) {
-    if (!kuta_context) return;
-    
-    vkDeviceWaitIdle(kuta_context->state.vk_core.device); // Wait before cleanup
-    
-    destroy_renderer(&kuta_context->state);
-    cleanup_swapchain(&kuta_context->state);
-    for (size_t i = 0; i < kuta_context->models.model_count; i++) {
-        if (kuta_context->models.texture[i].texture_sampler != VK_NULL_HANDLE){
-            vkDestroySampler(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_sampler, kuta_context->state.vk_core.allocator);
-        }
-        if (kuta_context->models.texture[i].texture_image_view != VK_NULL_HANDLE){
-            vkDestroyImageView(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_image_view, kuta_context->state.vk_core.allocator);
-        }
-        if (kuta_context->models.texture[i].texture_image != VK_NULL_HANDLE){
-            vkDestroyImage(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_image, kuta_context->state.vk_core.allocator);
-        }
-        if (kuta_context->models.texture[i].texture_image_memory != VK_NULL_HANDLE){
-            vkFreeMemory(kuta_context->state.vk_core.device, kuta_context->models.texture[i].texture_image_memory, kuta_context->state.vk_core.allocator);
-        }
+  if (!kuta_context)
+    return;
+
+  vkDeviceWaitIdle(kuta_context->state.vk_core.device); // Wait before cleanup
+
+  destroy_renderer(&kuta_context->state);
+  cleanup_swapchain(&kuta_context->state);
+  for (size_t i = 0; i < kuta_context->models.model_count; i++) {
+    if (kuta_context->models.texture[i].texture_sampler != VK_NULL_HANDLE) {
+      vkDestroySampler(kuta_context->state.vk_core.device,
+                       kuta_context->models.texture[i].texture_sampler,
+                       kuta_context->state.vk_core.allocator);
     }
-    destroy_uniform_buffers(&kuta_context->buffer_data, &kuta_context->state);
-    destroy_descriptor_sets(&kuta_context->state);
-    destroy_descriptor_set_layout(&kuta_context->state);
-    for (size_t i = 0; i < kuta_context->models.model_count; i++) {
-        destroy_index_buffers(&kuta_context->models, &kuta_context->state, i);
-        destroy_vertex_buffers(&kuta_context->models, &kuta_context->state, i);
-    }    
-    if (kuta_context->state.vk_core.device != VK_NULL_HANDLE)
-        vkDestroyDevice(kuta_context->state.vk_core.device, kuta_context->state.vk_core.allocator);
+    if (kuta_context->models.texture[i].texture_image_view != VK_NULL_HANDLE) {
+      vkDestroyImageView(kuta_context->state.vk_core.device,
+                         kuta_context->models.texture[i].texture_image_view,
+                         kuta_context->state.vk_core.allocator);
+    }
+    if (kuta_context->models.texture[i].texture_image != VK_NULL_HANDLE) {
+      vkDestroyImage(kuta_context->state.vk_core.device,
+                     kuta_context->models.texture[i].texture_image,
+                     kuta_context->state.vk_core.allocator);
+    }
+    if (kuta_context->models.texture[i].texture_image_memory !=
+        VK_NULL_HANDLE) {
+      vkFreeMemory(kuta_context->state.vk_core.device,
+                   kuta_context->models.texture[i].texture_image_memory,
+                   kuta_context->state.vk_core.allocator);
+    }
+  }
+  destroy_uniform_buffers(&kuta_context->buffer_data, &kuta_context->state);
+  destroy_descriptor_sets(&kuta_context->state);
+  destroy_descriptor_set_layout(&kuta_context->state);
+  for (size_t i = 0; i < kuta_context->models.model_count; i++) {
+    destroy_index_buffers(&kuta_context->models, &kuta_context->state, i);
+    destroy_vertex_buffers(&kuta_context->models, &kuta_context->state, i);
+  }
+  if (kuta_context->state.vk_core.device != VK_NULL_HANDLE)
+    vkDestroyDevice(kuta_context->state.vk_core.device,
+                    kuta_context->state.vk_core.allocator);
 
-    if (kuta_context->state.vk_core.surface != VK_NULL_HANDLE)
-        vkDestroySurfaceKHR(kuta_context->state.vk_core.instance, kuta_context->state.vk_core.surface, kuta_context->state.vk_core.allocator);
+  if (kuta_context->state.vk_core.surface != VK_NULL_HANDLE)
+    vkDestroySurfaceKHR(kuta_context->state.vk_core.instance,
+                        kuta_context->state.vk_core.surface,
+                        kuta_context->state.vk_core.allocator);
 
-    if (kuta_context->state.window_data.window)
-        glfwDestroyWindow(kuta_context->state.window_data.window);
+  if (kuta_context->state.window_data.window)
+    glfwDestroyWindow(kuta_context->state.window_data.window);
 
-    if (kuta_context->state.vk_core.instance != VK_NULL_HANDLE)
-        vkDestroyInstance(kuta_context->state.vk_core.instance, kuta_context->state.vk_core.allocator);
+  if (kuta_context->state.vk_core.instance != VK_NULL_HANDLE)
+    vkDestroyInstance(kuta_context->state.vk_core.instance,
+                      kuta_context->state.vk_core.allocator);
 }
 
-bool running(){
-    return !glfwWindowShouldClose(kuta_context->state.window_data.window);
+bool running() {
+  return !glfwWindowShouldClose(kuta_context->state.window_data.window);
 }

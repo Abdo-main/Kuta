@@ -198,6 +198,8 @@ void create_texture_image_view(State *state, Models *models, size_t index) {
   models->texture[index].texture_image_view = create_image_view(
       models->texture[index].texture_image, VK_FORMAT_R8G8B8A8_SRGB,
       VK_IMAGE_ASPECT_COLOR_BIT, state);
+  printf("Texture image view created: %p\n",
+         (void *)models->texture[index].texture_image_view);
 }
 
 void create_texture_sampler(State *state, Models *models, size_t index) {

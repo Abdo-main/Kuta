@@ -1,8 +1,10 @@
 #pragma once
 
+#include "kuta.h"
 #include "main.h"
 
-void record_command_buffer(BufferData *buffer_data, Settings *settings, Models *models, State *state);
+void record_command_buffer(BufferData *buffer_data, Settings *settings,
+                           Models *models, State *state, World *world);
 
 void submit_command_buffer(BufferData *buffer_data, State *state);
 

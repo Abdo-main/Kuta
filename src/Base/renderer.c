@@ -7,17 +7,18 @@
 #include <vulkan/vulkan_core.h>
 
 #include "descriptors.h"
+#include "kuta.h"
 #include "main.h"
 #include "utils.h"
 #include "vertex_data.h"
 
 void create_graphics_pipeline(State *state) {
   size_t vert_size;
-  const uint32_t *vert_shader_src = read_file("./vert.spv", &vert_size);
+  const uint32_t *vert_shader_src = read_file("./shaders/vert.spv", &vert_size);
   EXPECT(!vert_shader_src, "emtpy sprv file");
 
   size_t frag_size;
-  const uint32_t *frag_shader_src = read_file("./frag.spv", &frag_size);
+  const uint32_t *frag_shader_src = read_file("./shaders/frag.spv", &frag_size);
   EXPECT(!frag_shader_src, "emtpy sprv file");
 
   VkShaderModule vertex_shader_module, fragment_shader_module;
@@ -82,15 +83,23 @@ void create_graphics_pipeline(State *state) {
       .alphaBlendOp = VK_BLEND_OP_ADD,
   }};
 
+  VkPushConstantRange push_constant_range = {
+      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+      .offset = 0,
+      .size = sizeof(mat4) // Size of your model matrix
+  };
+
   EXPECT(vkCreatePipelineLayout(
              state->vk_core.device,
              &(VkPipelineLayoutCreateInfo){
                  .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
                  .setLayoutCount = 1,
                  .pSetLayouts = &state->renderer.descriptor_set_layout,
+                 .pushConstantRangeCount = 1,
+                 .pPushConstantRanges = &push_constant_range,
              },
              state->vk_core.allocator, &state->renderer.pipeline_layout),
-         "Faailed to create pipeline layout")
+         "Failed to create pipeline layout")
 
   VkVertexInputBindingDescription binding_description =
       get_binding_description();
@@ -153,7 +162,7 @@ void create_graphics_pipeline(State *state) {
                           VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
                       .lineWidth = 1.0,
                       .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-                      .cullMode = VK_CULL_MODE_BACK_BIT,
+                      .cullMode = VK_CULL_MODE_NONE,
                       .polygonMode = VK_POLYGON_MODE_FILL,
                   },
               .pMultisampleState =
@@ -412,7 +421,7 @@ void destroy_sync_objects(State *state) {
 }
 
 void record_command_buffer(BufferData *buffer_data, Settings *settings,
-                           Models *models, State *state) {
+                           Models *models, State *state, World *world) {
   VkCommandBuffer command_buffer =
       state->renderer.command_buffers[state->renderer.current_frame];
 
@@ -463,26 +472,7 @@ void record_command_buffer(BufferData *buffer_data, Settings *settings,
   VkRect2D scissor = {.offset = {0, 0}, .extent = state->swp_ch.extent};
   vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-  for (size_t i = 0; i < models->model_count; i++) {
-    // Bind vertex and index buffers for this model
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(command_buffer, 0, 1, &models->vertex_buffers[i],
-                           offsets);
-    vkCmdBindIndexBuffer(command_buffer, models->index_buffers[i], 0,
-                         VK_INDEX_TYPE_UINT32);
-
-    // Bind the correct descriptor set for this frame and model
-    size_t descriptor_index =
-        state->renderer.current_frame * models->model_count + i;
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            state->renderer.pipeline_layout, 0, 1,
-                            &state->renderer.descriptor_sets[descriptor_index],
-                            0, NULL);
-
-    // Draw this model
-    uint32_t index_count = models->geometry[i].index_count;
-    vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
-  }
+  render_system_draw(world, command_buffer);
 
   vkCmdEndRenderPass(command_buffer);
 
