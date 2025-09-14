@@ -1,25 +1,29 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include "main.h"
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
-void create_texture_image(const char* filenames[], Models *models, State *state, size_t index);
+typedef struct {
+  VkImage texture_image;
+  VkDeviceMemory *texture_image_memory;
+} Texture_image__memory;
 
-void create_texture_image_view(State *state, Models *models, size_t index);
+Texture_image__memory
+create_texture_image(const char *filename, State *state,
+                     VkDeviceMemory *texture_image_memory);
+VkImageView create_texture_image_view(State *state, VkImage texture_image);
 
-void load_textures(Models *models, State *state, const char* textures_files[]);
+void transition_image_layout(VkImage image, VkFormat format,
+                             VkImageLayout old_layout, VkImageLayout new_layout,
+                             State *state);
 
-void transition_image_layout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout, State *state);
+void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width,
+                          uint32_t height, State *state);
 
-void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, State *state);
+VkSampler create_texture_sampler(State *state);
 
-void create_texture_sampler(State *state, Models *models, size_t index);
-
-void create_image(uint32_t width, uint32_t height,
-                  VkFormat format, VkImageTiling tiling,
-                  VkImageUsageFlags usage,
-                  VkMemoryPropertyFlags properties,
-                  VkImage* image,
-                  VkDeviceMemory* image_memory,
-                  State *state
-                  );
+void create_image(uint32_t width, uint32_t height, VkFormat format,
+                  VkImageTiling tiling, VkImageUsageFlags usage,
+                  VkMemoryPropertyFlags properties, VkImage *image,
+                  VkDeviceMemory *image_memory, State *state);

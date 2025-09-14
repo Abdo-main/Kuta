@@ -111,19 +111,5 @@ target_include_directories(kuta PRIVATE
     ${INCLUDE_DIR}
 )
 
-# Copy shaders to build directory (cross-platform)
-file(GLOB SHADER_FILES "${SHADER_DIR}/*.spv")
-if(SHADER_FILES)
-    foreach(SHADER_FILE ${SHADER_FILES})
-        add_custom_command(TARGET kuta POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${SHADER_FILE} $<TARGET_FILE_DIR:kuta>
-        )
-    endforeach()
-    message(STATUS "Found ${CMAKE_MATCH_COUNT} shader files to copy")
-else()
-    message(WARNING "No .spv shader files found in ${SHADER_DIR}")
-endif()
-
 # Optional: Install target
 install(TARGETS kuta DESTINATION bin)

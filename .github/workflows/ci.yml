@@ -179,6 +179,10 @@ jobs:
             cp -r ../textures .
             echo "Copied textures"
           fi
+          if [ -d "../shaders" ]; then
+            cp -r ../shaders .
+            echo "Copied shaders"
+          fi
       - name: Verify build output
         shell: msys2 {0}
         run: |

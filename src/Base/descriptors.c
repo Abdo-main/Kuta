@@ -46,9 +46,9 @@ void destroy_descriptor_set_layout(State *state) {
                                state->vk_core.allocator);
 }
 
-void create_descriptor_pool(State *state, Models *models) {
+void create_descriptor_pool(State *state, ResourceManager *rm) {
   // Calculate total descriptor sets needed: one per frame per model
-  uint32_t total_sets = MAX_FRAMES_IN_FLIGHT * models->model_count;
+  uint32_t total_sets = MAX_FRAMES_IN_FLIGHT * rm->geometry_count;
 
   VkDescriptorPoolSize pool_sizes[2] = {0};
   pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -71,10 +71,10 @@ void create_descriptor_pool(State *state, Models *models) {
          "Failed to create descriptor pool!")
 }
 
-void create_descriptor_sets(BufferData *buffer_data, Models *models,
+void create_descriptor_sets(BufferData *buffer_data, ResourceManager *rm,
                             State *state) {
   // Create descriptor sets for each frame AND each model
-  size_t total_sets = MAX_FRAMES_IN_FLIGHT * models->model_count;
+  size_t total_sets = MAX_FRAMES_IN_FLIGHT * rm->geometry_count;
 
   VkDescriptorSetLayout *layouts =
       malloc(sizeof(VkDescriptorSetLayout) * total_sets);
@@ -99,8 +99,8 @@ void create_descriptor_sets(BufferData *buffer_data, Models *models,
 
   // Update descriptor sets for each frame-model combination
   for (size_t frame = 0; frame < MAX_FRAMES_IN_FLIGHT; frame++) {
-    for (size_t model = 0; model < models->model_count; model++) {
-      size_t set_index = frame * models->model_count + model;
+    for (size_t model = 0; model < rm->geometry_count; model++) {
+      size_t set_index = frame * rm->geometry_count + model;
 
       VkDescriptorBufferInfo buffer_info = {
           .buffer = buffer_data->uniform_buffers[frame],
@@ -111,8 +111,8 @@ void create_descriptor_sets(BufferData *buffer_data, Models *models,
       VkDescriptorImageInfo image_info = {
           .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
           .imageView =
-              models->texture[model].texture_image_view,     // Use model index
-          .sampler = models->texture[model].texture_sampler, // Use model index
+              rm->textures[model].texture_image_view,     // Use model index
+          .sampler = rm->textures[model].texture_sampler, // Use model index
       };
 
       VkWriteDescriptorSet descriptor_writes[2] = {

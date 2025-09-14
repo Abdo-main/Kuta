@@ -75,7 +75,7 @@ uint32_t load_geometry(const char *filepath);
 
 void free_geometry_buffers(ResourceManager *rm, State *state, uint32_t id);
 
-void load_texture(const char *textures_files[]);
+uint32_t load_texture(const char *texture_file);
 
 void renderer_deinit(void);
 

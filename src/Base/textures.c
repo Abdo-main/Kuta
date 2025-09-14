@@ -11,13 +11,6 @@
 #include "utils.h"
 #include "vertex_data.h"
 
-void load_textures(Models *models, State *state, const char *textures_files[]) {
-  for (size_t i = 0; i < models->model_count; i++) {
-    create_texture_image(textures_files, models, state, i);
-    create_texture_image_view(state, models, i);
-    create_texture_sampler(state, models, i);
-  }
-}
 void create_image(uint32_t width, uint32_t height, VkFormat format,
                   VkImageTiling tiling, VkImageUsageFlags usage,
                   VkMemoryPropertyFlags properties, VkImage *image,
@@ -60,14 +53,16 @@ void create_image(uint32_t width, uint32_t height, VkFormat format,
   vkBindImageMemory(state->vk_core.device, *image, *image_memory, 0);
 }
 
-void create_texture_image(const char *filenames[], Models *models, State *state,
-                          size_t index) {
+Texture_image__memory
+create_texture_image(const char *filename, State *state,
+                     VkDeviceMemory *texture_image_memory) {
   VkBuffer staging_buffer;
   VkDeviceMemory staging_buffer_memmory;
+  VkImage texture_image; // Declared but not initialized yet
 
   int tex_width, tex_height, tex_channels;
-  stbi_uc *pixels = stbi_load(filenames[index], &tex_width, &tex_height,
-                              &tex_channels, STBI_rgb_alpha);
+  stbi_uc *pixels = stbi_load(filename, &tex_width, &tex_height, &tex_channels,
+                              STBI_rgb_alpha);
   VkDeviceSize image_size = tex_width * tex_height * 4;
 
   EXPECT(!pixels, "Failed to load texture image!")
@@ -85,27 +80,35 @@ void create_texture_image(const char *filenames[], Models *models, State *state,
 
   stbi_image_free(pixels);
 
+  // NOW create the image (this initializes texture_image)
   create_image(tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB,
                VK_IMAGE_TILING_OPTIMAL,
                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-               &models->texture[index].texture_image,
-               &models->texture[index].texture_image_memory, state);
+               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &texture_image,
+               texture_image_memory, state);
 
-  transition_image_layout(models->texture[index].texture_image,
-                          VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+  // Create the struct AFTER texture_image is initialized
+  Texture_image__memory tx = {
+      .texture_image = texture_image, // Now contains valid data
+      .texture_image_memory = texture_image_memory,
+  };
+
+  transition_image_layout(texture_image, VK_FORMAT_R8G8B8A8_SRGB,
+                          VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, state);
-  copy_buffer_to_image(staging_buffer, models->texture[index].texture_image,
-                       (uint32_t)tex_width, (uint32_t)tex_height, state);
-  transition_image_layout(models->texture[index].texture_image,
-                          VK_FORMAT_R8G8B8A8_SRGB,
+  copy_buffer_to_image(staging_buffer, texture_image, (uint32_t)tex_width,
+                       (uint32_t)tex_height, state);
+  transition_image_layout(texture_image, VK_FORMAT_R8G8B8A8_SRGB,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                           VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, state);
+
   // CLEANUP
   vkDestroyBuffer(state->vk_core.device, staging_buffer,
                   state->vk_core.allocator);
   vkFreeMemory(state->vk_core.device, staging_buffer_memmory,
                state->vk_core.allocator);
+
+  return tx;
 }
 
 void transition_image_layout(VkImage image, VkFormat format,
@@ -194,15 +197,14 @@ void copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width,
   end_single_time_commands(command_buffer, state);
 }
 
-void create_texture_image_view(State *state, Models *models, size_t index) {
-  models->texture[index].texture_image_view = create_image_view(
-      models->texture[index].texture_image, VK_FORMAT_R8G8B8A8_SRGB,
-      VK_IMAGE_ASPECT_COLOR_BIT, state);
-  printf("Texture image view created: %p\n",
-         (void *)models->texture[index].texture_image_view);
+VkImageView create_texture_image_view(State *state, VkImage texture_image) {
+  VkImageView texture_image_view = create_image_view(
+      texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, state);
+
+  return texture_image_view;
 }
 
-void create_texture_sampler(State *state, Models *models, size_t index) {
+VkSampler create_texture_sampler(State *state) {
   VkPhysicalDeviceProperties properties = {};
   vkGetPhysicalDeviceProperties(state->vk_core.physical_device, &properties);
 
@@ -224,8 +226,9 @@ void create_texture_sampler(State *state, Models *models, size_t index) {
       .minLod = 0.0f,
       .maxLod = 0.0f,
   };
+  VkSampler texture_sampler;
   EXPECT(vkCreateSampler(state->vk_core.device, &sampler_info,
-                         state->vk_core.allocator,
-                         &models->texture[index].texture_sampler),
+                         state->vk_core.allocator, &texture_sampler),
          "Failed to create texture sampler")
+  return texture_sampler;
 }

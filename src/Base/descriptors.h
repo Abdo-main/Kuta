@@ -10,7 +10,8 @@ typedef struct {
 
 void create_descriptor_set_layout(State *state);
 void destroy_descriptor_set_layout(State *state);
-void create_descriptor_pool(State *state, Models *models);
-void create_descriptor_sets(BufferData *buffer_data, Models *models,
+void create_descriptor_pool(State *state, ResourceManager *rm);
+
+void create_descriptor_sets(BufferData *buffer_data, ResourceManager *rm,
                             State *state);
 void destroy_descriptor_sets(State *state);

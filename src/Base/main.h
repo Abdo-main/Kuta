@@ -37,7 +37,6 @@ typedef struct {
 } SwapchainData;
 
 typedef struct {
-
   // Per-frame uniform buffers
   VkBuffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
   VkDeviceMemory uniform_buffers_memory[MAX_FRAMES_IN_FLIGHT];
@@ -77,24 +76,6 @@ typedef struct {
   // Index of the top element in the stack
   int top;
 } Stack;
-
-typedef struct {
-  GeometryData *geometry;
-  TextureData *texture;
-
-  // Geometry buffers
-  VkBuffer *vertex_buffers;
-  VkDeviceMemory *vertex_buffer_memory;
-  VkBuffer *index_buffers;
-  VkDeviceMemory *index_buffer_memory;
-
-  size_t total_vertices;
-  size_t total_indices;
-
-  size_t model_count;
-  const char **model_files;
-  const char **texture_files;
-} Models;
 
 typedef struct {
   mat4 view;
@@ -160,6 +141,7 @@ typedef struct {
   VkDeviceMemory *vertex_memory;
   VkBuffer *index_buffers;
   VkDeviceMemory *index_memory;
+  VkDeviceMemory *texture_memory;
 
   uint32_t geometry_count;
   uint32_t geometry_capacity;
@@ -177,12 +159,10 @@ typedef struct {
 
   uint32_t window_width, window_height;
   uint32_t api_version;
-  uint32_t models_count;
   VkClearColorValue background_color;
 } Settings;
 
 typedef struct {
-  Models models;
   State state;
   BufferData buffer_data;
   Settings settings;

@@ -14,11 +14,11 @@
 
 void create_graphics_pipeline(State *state) {
   size_t vert_size;
-  const uint32_t *vert_shader_src = read_file("./vert.spv", &vert_size);
+  const uint32_t *vert_shader_src = read_file("./shaders/vert.spv", &vert_size);
   EXPECT(!vert_shader_src, "emtpy sprv file");
 
   size_t frag_size;
-  const uint32_t *frag_shader_src = read_file("./frag.spv", &frag_size);
+  const uint32_t *frag_shader_src = read_file("./shaders/frag.spv", &frag_size);
   EXPECT(!frag_shader_src, "emtpy sprv file");
 
   VkShaderModule vertex_shader_module, fragment_shader_module;
@@ -421,7 +421,7 @@ void destroy_sync_objects(State *state) {
 }
 
 void record_command_buffer(BufferData *buffer_data, Settings *settings,
-                           Models *models, State *state, World *world) {
+                           State *state, World *world) {
   VkCommandBuffer command_buffer =
       state->renderer.command_buffers[state->renderer.current_frame];
 
@@ -504,26 +504,6 @@ void submit_command_buffer(BufferData *buffer_data, State *state) {
                      }},
              state->renderer.in_flight_fence[frame]),
          "Couldn't submit command buffer");
-}
-
-void alloc_model_data(Models *models) {
-  models->geometry = calloc(models->model_count, sizeof(GeometryData));
-  models->texture = calloc(models->model_count, sizeof(TextureData));
-
-  models->vertex_buffers = calloc(models->model_count, sizeof(VkBuffer));
-  models->vertex_buffer_memory =
-      calloc(models->model_count, sizeof(VkDeviceMemory));
-  models->index_buffers = calloc(models->model_count, sizeof(VkBuffer));
-  models->index_buffer_memory =
-      calloc(models->model_count, sizeof(VkDeviceMemory));
-
-  // Initialize all Vulkan handles to VK_NULL_HANDLE
-  for (size_t i = 0; i < models->model_count; i++) {
-    models->vertex_buffers[i] = VK_NULL_HANDLE;
-    models->vertex_buffer_memory[i] = VK_NULL_HANDLE;
-    models->index_buffers[i] = VK_NULL_HANDLE;
-    models->index_buffer_memory[i] = VK_NULL_HANDLE;
-  }
 }
 
 void destroy_renderer(State *state) {
