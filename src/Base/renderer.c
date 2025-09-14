@@ -14,11 +14,11 @@
 
 void create_graphics_pipeline(State *state) {
   size_t vert_size;
-  const uint32_t *vert_shader_src = read_file("./shaders/vert.spv", &vert_size);
+  const uint32_t *vert_shader_src = read_file("./vert.spv", &vert_size);
   EXPECT(!vert_shader_src, "emtpy sprv file");
 
   size_t frag_size;
-  const uint32_t *frag_shader_src = read_file("./shaders/frag.spv", &frag_size);
+  const uint32_t *frag_shader_src = read_file("./frag.spv", &frag_size);
   EXPECT(!frag_shader_src, "emtpy sprv file");
 
   VkShaderModule vertex_shader_module, fragment_shader_module;
