@@ -2,7 +2,6 @@
 
 #include "main.h"
 
-#define MAX_ENTITIES 1024
 #define MAX_COMPONENT_TYPES 32
 #define COMPONENT_SIGNATURE(type) (1ULL << (type))
 
@@ -72,7 +71,9 @@ bool kuta_init(Settings *settings);
 
 void renderer_init(void);
 
-void load_glbs(const char *models_files[]);
+uint32_t load_geometry(const char *filepath);
+
+void free_geometry_buffers(ResourceManager *rm, State *state, uint32_t id);
 
 void load_texture(const char *textures_files[]);
 

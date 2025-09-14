@@ -7,6 +7,7 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 #define MAX_FRAMES_IN_FLIGHT 2
+#define MAX_ENTITIES 1024
 
 typedef struct {
   vec3 pos;
@@ -68,6 +69,14 @@ typedef struct {
   size_t vertex_count;
   size_t index_count;
 } GeometryData;
+
+// Define a structure for the stack
+typedef struct {
+  // Array to store stack elements
+  int arr[MAX_ENTITIES];
+  // Index of the top element in the stack
+  int top;
+} Stack;
 
 typedef struct {
   GeometryData *geometry;
@@ -142,6 +151,24 @@ typedef struct {
   WindowData window_data;
   InputState input_state;
 } State;
+
+typedef struct {
+  GeometryData *geometries;
+  TextureData *textures;
+
+  VkBuffer *vertex_buffers;
+  VkDeviceMemory *vertex_memory;
+  VkBuffer *index_buffers;
+  VkDeviceMemory *index_memory;
+
+  uint32_t geometry_count;
+  uint32_t geometry_capacity;
+  uint32_t texture_count;
+  uint32_t texture_capacity;
+
+  Stack free_geometry_ids;
+  Stack free_texture_ids;
+} ResourceManager;
 
 typedef struct {
   const char *window_title;

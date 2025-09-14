@@ -507,20 +507,23 @@ void submit_command_buffer(BufferData *buffer_data, State *state) {
 }
 
 void alloc_model_data(Models *models) {
-  models->geometry = malloc(sizeof(GeometryData) * models->model_count);
-  models->texture = malloc(sizeof(TextureData) * models->model_count);
+  models->geometry = calloc(models->model_count, sizeof(GeometryData));
+  models->texture = calloc(models->model_count, sizeof(TextureData));
 
-  // Initialize texture data to zero to avoid garbage values
-  memset(models->texture, 0, sizeof(TextureData) * models->model_count);
-  memset(models->geometry, 0, sizeof(GeometryData) * models->model_count);
-
-  // THEN: Allocate the buffer pointer arrays
-  models->vertex_buffers = malloc(sizeof(VkBuffer) * models->model_count);
+  models->vertex_buffers = calloc(models->model_count, sizeof(VkBuffer));
   models->vertex_buffer_memory =
-      malloc(sizeof(VkDeviceMemory) * models->model_count);
-  models->index_buffers = malloc(sizeof(VkBuffer) * models->model_count);
+      calloc(models->model_count, sizeof(VkDeviceMemory));
+  models->index_buffers = calloc(models->model_count, sizeof(VkBuffer));
   models->index_buffer_memory =
-      malloc(sizeof(VkDeviceMemory) * models->model_count);
+      calloc(models->model_count, sizeof(VkDeviceMemory));
+
+  // Initialize all Vulkan handles to VK_NULL_HANDLE
+  for (size_t i = 0; i < models->model_count; i++) {
+    models->vertex_buffers[i] = VK_NULL_HANDLE;
+    models->vertex_buffer_memory[i] = VK_NULL_HANDLE;
+    models->index_buffers[i] = VK_NULL_HANDLE;
+    models->index_buffer_memory[i] = VK_NULL_HANDLE;
+  }
 }
 
 void destroy_renderer(State *state) {

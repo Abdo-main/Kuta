@@ -309,10 +309,87 @@ void renderer_deinit(void) {
   create_sync_objects(&kuta_context->state);
 }
 
-void load_glbs(const char *models_files[]) {
-  load_models(models_files, &kuta_context->models,
-              kuta_context->models.model_count, &kuta_context->buffer_data,
-              &kuta_context->state);
+ResourceManager *get_resource_manager() {
+  static ResourceManager rm = {0};
+  static bool initialized = false;
+
+  if (!kuta_context) {
+    printf("Error: kuta_context is NULL!\n");
+    return NULL;
+  }
+
+  if (!initialized) {
+    // Use the actual allocated capacity
+    rm.geometry_capacity = kuta_context->models.model_count;
+    rm.geometry_count = 0;
+    rm.geometries = kuta_context->models.geometry;
+    rm.vertex_buffers = kuta_context->models.vertex_buffers;
+    rm.vertex_memory = kuta_context->models.vertex_buffer_memory;
+    rm.index_buffers = kuta_context->models.index_buffers;
+    rm.index_memory = kuta_context->models.index_buffer_memory;
+
+    rm.texture_capacity = kuta_context->models.model_count;
+    rm.texture_count = 0;
+    rm.textures = kuta_context->models.texture;
+
+    initialize(&rm.free_geometry_ids);
+    initialize(&rm.free_texture_ids);
+
+    initialized = true;
+  }
+
+  return &rm;
+}
+
+uint32_t load_geometry(const char *filepath) {
+  ResourceManager *rm = get_resource_manager();
+  // Check if we have space
+  if (rm->geometry_count >= rm->geometry_capacity &&
+      isEmpty(&rm->free_geometry_ids)) {
+    printf("Error: No more geometry slots available!\n");
+    return UINT32_MAX; // Return invalid ID
+  }
+  // Grow arrays if needed...
+  uint32_t id = !isEmpty(&rm->free_geometry_ids) ? pop(&rm->free_geometry_ids)
+                                                 : rm->geometry_count++;
+  // Additional safety check
+  if (id >= rm->geometry_capacity) {
+    printf("Error: Geometry ID %u exceeds capacity %u!\n", id,
+           rm->geometry_capacity);
+    return UINT32_MAX;
+  }
+
+  GeometryData geometry = load_models(filepath);
+  rm->geometries[id] = geometry;
+
+  create_vertex_buffer(&kuta_context->state, &kuta_context->buffer_data,
+                       geometry.vertices, geometry.vertex_count,
+                       &rm->vertex_buffers[id], &rm->vertex_memory[id]);
+
+  create_index_buffer(&kuta_context->state, &kuta_context->buffer_data,
+                      geometry.indices, geometry.index_count,
+                      &rm->index_buffers[id], &rm->index_memory[id]);
+  return id;
+}
+
+void free_geometry_buffers(ResourceManager *rm, State *state, uint32_t id) {
+  if (rm->vertex_buffers[id] != VK_NULL_HANDLE)
+    vkDestroyBuffer(state->vk_core.device, rm->vertex_buffers[id],
+                    state->vk_core.allocator);
+
+  if (rm->vertex_memory[id] != VK_NULL_HANDLE)
+    vkFreeMemory(state->vk_core.device, rm->vertex_memory[id],
+                 state->vk_core.allocator);
+
+  if (rm->index_buffers[id] != VK_NULL_HANDLE)
+    vkDestroyBuffer(state->vk_core.device, rm->index_buffers[id],
+                    state->vk_core.allocator);
+
+  if (rm->index_memory[id] != VK_NULL_HANDLE)
+    vkFreeMemory(state->vk_core.device, rm->index_memory[id],
+                 state->vk_core.allocator);
+
+  push(&rm->free_geometry_ids, id);
 }
 
 void load_texture(const char *textures_files[]) {
@@ -388,9 +465,9 @@ void kuta_deinit(void) {
   destroy_uniform_buffers(&kuta_context->buffer_data, &kuta_context->state);
   destroy_descriptor_sets(&kuta_context->state);
   destroy_descriptor_set_layout(&kuta_context->state);
-  for (size_t i = 0; i < kuta_context->models.model_count; i++) {
-    destroy_index_buffers(&kuta_context->models, &kuta_context->state, i);
-    destroy_vertex_buffers(&kuta_context->models, &kuta_context->state, i);
+  ResourceManager *rm = get_resource_manager();
+  for (uint32_t i = 0; i < rm->geometry_count; i++) {
+    free_geometry_buffers(rm, &kuta_context->state, i);
   }
   if (kuta_context->state.vk_core.device != VK_NULL_HANDLE)
     vkDestroyDevice(kuta_context->state.vk_core.device,

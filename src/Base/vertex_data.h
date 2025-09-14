@@ -16,11 +16,14 @@ AttributeDescriptions get_attribute_descriptions(void);
 uint32_t find_memory_type(uint32_t type_filter,
                           VkMemoryPropertyFlags properties, State *state);
 
-void create_vertex_buffer(BufferData *buffer_data, Models *models, State *state,
-                          size_t index);
+void create_vertex_buffer(State *state, BufferData *buffer_data,
+                          Vertex *vertices, size_t vertex_count,
+                          VkBuffer *vertex_buffer,
+                          VkDeviceMemory *vertex_memory);
 
-void create_index_buffer(BufferData *buffer_data, Models *models, State *state,
-                         size_t index);
+void create_index_buffer(State *state, BufferData *buffer_data,
+                         uint32_t *indices, size_t indices_count,
+                         VkBuffer *index_buffer, VkDeviceMemory *index_memory);
 
 void create_uniform_buffers(State *state, BufferData *buffer_data);
 
@@ -36,9 +39,5 @@ VkFormat find_depth_format(State *state);
 
 void update_uniform_buffer(uint32_t current_image, State *state,
                            BufferData *buffer_data);
-
-void destroy_vertex_buffers(Models *models, State *state, size_t index);
-
-void destroy_index_buffers(Models *models, State *state, size_t index);
 
 void destroy_uniform_buffers(BufferData *buffer_data, State *state);
