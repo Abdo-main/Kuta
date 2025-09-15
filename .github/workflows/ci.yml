@@ -187,11 +187,6 @@ jobs:
             examples/build-mingw/models/
             examples/build-mingw/textures/
           retention-days: 30
-
-  build-windows-msvc:
-    runs-on: windows-latest
-    if: false
-
   release:
     needs: [build-linux, build-windows-mingw]
     runs-on: ubuntu-latest
