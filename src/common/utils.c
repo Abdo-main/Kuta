@@ -18,6 +18,7 @@ uint32_t clamp(uint32_t value, uint32_t min, uint32_t max) {
   return value;
 }
 
+// STACK FUNCTIONS
 void initialize(Stack *stack) { stack->top = -1; }
 
 bool isEmpty(Stack *stack) { return stack->top == -1; }
@@ -41,6 +42,7 @@ uint32_t pop(Stack *stack) {
   stack->top--;
   return popped;
 }
+// ENDS HERE
 
 VkCommandBuffer begin_single_time_commands(State *state) {
   VkCommandBufferAllocateInfo alloc_info = {
@@ -107,7 +109,6 @@ const uint32_t *read_file(const char *filename, size_t *size) {
     return NULL;
   }
 
-  // Go to end to get file size
   fseek(file, 0, SEEK_END);
   long file_size = ftell(file);
   rewind(file);
@@ -118,7 +119,6 @@ const uint32_t *read_file(const char *filename, size_t *size) {
     return NULL;
   }
 
-  // Allocate memory for the file content
   uint32_t *buffer = malloc(file_size);
   if (!buffer) {
     fprintf(stderr, "Failed to allocate memory for shader\n");
@@ -126,7 +126,6 @@ const uint32_t *read_file(const char *filename, size_t *size) {
     return NULL;
   }
 
-  // Read file into buffer
   size_t read_size = fread(buffer, 1, file_size, file);
   fclose(file);
 

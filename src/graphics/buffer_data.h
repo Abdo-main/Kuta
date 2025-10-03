@@ -1,6 +1,5 @@
 #pragma once
 #include "internal_types.h"
-#include "types.h"
 #include <cglm/types.h>
 #include <stdbool.h>
 #include <stdint.h>

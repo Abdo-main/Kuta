@@ -1,5 +1,7 @@
+#include "cglm/types.h"
 #include "kuta.h"
 #include "types.h"
+#include <GLFW/glfw3.h>
 #include <cglm/cglm.h>
 #include <stdbool.h>
 #include <vulkan/vulkan.h>
@@ -27,7 +29,7 @@ int main(void) {
 
   World world;
   world_init(&world);
-
+  vec3 speed = {0.001f, 0.0f, 0.001f};
   Entity player = create_entity(&world);
 
   TransformComponent transform1 = {.position = {0.0f, 0.0f, 0.0f},
@@ -66,6 +68,7 @@ int main(void) {
 
     float time = glfwGetTime();
 
+    move_entity(&world, player, speed);
     vec3 rotation = {0.0f, time, 0.0f};
     set_entity_rotation(&world, player, rotation);
     set_entity_rotation(&world, enemy, rotation);

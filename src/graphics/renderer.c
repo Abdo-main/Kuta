@@ -8,7 +8,7 @@
 
 #include "buffer_data.h"
 #include "internal_types.h"
-#include "kuta.h"
+#include "kuta_internal.h"
 #include "utils.h"
 
 void create_graphics_pipeline(State *state) {
@@ -413,7 +413,6 @@ void record_command_buffer(BufferData *buffer_data, Settings *settings,
   VkCommandBuffer command_buffer =
       state->renderer.command_buffers[state->renderer.current_frame];
 
-  // Reset the command buffer
   vkResetCommandBuffer(command_buffer, 0);
 
   EXPECT(vkBeginCommandBuffer(

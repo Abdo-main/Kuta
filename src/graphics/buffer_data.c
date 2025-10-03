@@ -9,8 +9,6 @@
 #include "texture_data.h"
 #include "utils.h"
 
-#define MAX_FRAMES_IN_FLIGHT 2
-
 VkVertexInputBindingDescription get_binding_description() {
   VkVertexInputBindingDescription binding_description = {
       .binding = 0,

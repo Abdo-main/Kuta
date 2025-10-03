@@ -1,7 +1,6 @@
 #pragma once
 
 #include "internal_types.h"
-#include "kuta.h"
 
 void record_command_buffer(BufferData *buffer_data, Settings *settings,
                            State *state, World *world);
