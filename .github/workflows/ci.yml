@@ -52,7 +52,7 @@ jobs:
 
       - name: Build Kuta
         run: cmake --build build --config $BUILD_TYPE --parallel $(nproc)
-        working-directory: kuta
+        working-directory: .
 
       - name: Verify shaders copied
         run: |
