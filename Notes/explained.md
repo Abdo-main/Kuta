@@ -1,4 +1,30 @@
-## Phase 1: Core ECS Foundation - Step by Step
+# Run with full debugging
+
+WAYLAND_DEBUG=1 CAGE_DEBUG=1 cage ./build/kuta 2>&1 | tee cage.log
+
+# Check if your user has seat permissions
+
+loginctl show-session $XDG_SESSION_ID
+
+# Verify seatd/elogind is running
+
+systemctl status seatd
+
+# or
+
+systemctl status elogind## Phase 1: Core ECS Foundation - Step by Step
+
+For NixOS, ensure your configuration has:
+
+programs.cage.enable = true;
+
+# And proper seat management
+
+services.seatd.enable = true;
+
+# Or
+
+security.polkit.enable = true;
 
 ### Step 1.1: Understanding the ECS Core Structures
 
