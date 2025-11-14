@@ -8,7 +8,6 @@
 #include <vulkan/vulkan_core.h>
 
 #include "buffer_data.h"
-#include "camera.h"
 #include "descriptors.h"
 #include "internal_types.h"
 #include "kuta.h"
@@ -33,11 +32,17 @@ void world_init(World *world) {
       malloc(sizeof(MeshRendererComponent) * MAX_ENTITIES);
   world->component_pools[COMPONENT_VISIBILITY] =
       malloc(sizeof(VisibilityComponent) * MAX_ENTITIES);
+  world->component_pools[COMPONENT_CAMERA] =
+      malloc(sizeof(CameraComponent) * MAX_ENTITIES); // ADD
+  world->component_pools[COMPONENT_LIGHT] =
+      malloc(sizeof(LightComponent) * MAX_ENTITIES); // ADD
 
   world->component_sizes[COMPONENT_TRANSFORM] = sizeof(TransformComponent);
   world->component_sizes[COMPONENT_MESH_RENDERER] =
       sizeof(MeshRendererComponent);
   world->component_sizes[COMPONENT_VISIBILITY] = sizeof(VisibilityComponent);
+  world->component_sizes[COMPONENT_CAMERA] = sizeof(CameraComponent); // ADD
+  world->component_sizes[COMPONENT_LIGHT] = sizeof(LightComponent);   // ADD
 
   world->entity_count = 0;
   world->next_entity_id = 1;
@@ -297,6 +302,256 @@ void render_system_draw(World *world, VkCommandBuffer cmd_buffer) {
   }
 }
 
+// Update camera vectors based on yaw/pitch
+void camera_system_update_vectors(CameraComponent *camera) {
+  vec3 front;
+  front[0] = cos(glm_rad(camera->yaw)) * cos(glm_rad(camera->pitch));
+  front[1] = sin(glm_rad(camera->pitch));
+  front[2] = sin(glm_rad(camera->yaw)) * cos(glm_rad(camera->pitch));
+
+  glm_vec3_normalize_to(front, camera->front);
+  glm_vec3_crossn(camera->front, camera->worldUp, camera->right);
+  glm_vec3_crossn(camera->right, camera->front, camera->up);
+}
+
+// Update camera matrices
+void camera_system_update(World *world, uint32_t window_width,
+                          uint32_t window_height) {
+  for (uint32_t i = 0; i < world->entity_count; i++) {
+    Entity entity = world->entities[i];
+
+    if (!(world->signatures[entity] & COMPONENT_SIGNATURE(COMPONENT_CAMERA))) {
+      continue;
+    }
+
+    CameraComponent *camera = get_component(world, entity, COMPONENT_CAMERA);
+
+    if (!camera->active) {
+      continue;
+    }
+
+    if (camera->dirty) {
+      // Update view matrix
+      vec3 center;
+      glm_vec3_add(camera->position, camera->front, center);
+      glm_lookat(camera->position, center, camera->up, camera->view);
+
+      // Update projection matrix
+      float aspect = (float)window_width / (float)window_height;
+      glm_perspective(glm_rad(camera->fov), aspect, camera->nearPlane,
+                      camera->farPlane, camera->projection);
+
+      // Flip Y for Vulkan
+      camera->projection[1][1] *= -1;
+
+      camera->dirty = false;
+    }
+  }
+}
+
+// return active camera
+CameraComponent *get_active_camera(World *world) {
+  for (uint32_t i = 0; i < world->entity_count; i++) {
+    Entity entity = world->entities[i];
+
+    if (!(world->signatures[entity] & COMPONENT_SIGNATURE(COMPONENT_CAMERA))) {
+      continue;
+    }
+
+    CameraComponent *camera = get_component(world, entity, COMPONENT_CAMERA);
+    if (camera->active) {
+      return camera;
+    }
+  }
+  return NULL;
+}
+
+void set_active_camera(Entity *camera_entity) {
+  kuta_context->state.input_state.active_camera_entity = *camera_entity;
+}
+
+void camera_move(World *world, Entity camera_entity, vec3 direction,
+                 float deltaTime) {
+  CameraComponent *camera =
+      get_component(world, camera_entity, COMPONENT_CAMERA);
+  if (!camera)
+    return;
+
+  vec3 movement;
+  glm_vec3_scale(direction, deltaTime * 5.0f,
+                 movement); // 5.0f = movement speed
+  glm_vec3_add(camera->position, movement, camera->position);
+  camera->dirty = true;
+}
+
+void camera_rotate(World *world, Entity camera_entity, float yaw_delta,
+                   float pitch_delta) {
+  CameraComponent *camera =
+      get_component(world, camera_entity, COMPONENT_CAMERA);
+  if (!camera)
+    return;
+
+  camera->yaw += yaw_delta * 0.1f; // 0.1f = sensitivity
+  camera->pitch += pitch_delta * 0.1f;
+
+  // Clamp pitch
+  if (camera->pitch > 89.0f)
+    camera->pitch = 89.0f;
+  if (camera->pitch < -89.0f)
+    camera->pitch = -89.0f;
+
+  camera_system_update_vectors(camera);
+  camera->dirty = true;
+}
+
+// Process input for camera entity
+void camera_system_process_input(World *world, State *state, float deltaTime) {
+  Entity camera_entity = state->input_state.active_camera_entity;
+  if (camera_entity == 0)
+    return; // No active camera
+
+  CameraComponent *camera =
+      get_component(world, camera_entity, COMPONENT_CAMERA);
+  if (!camera || !camera->active)
+    return;
+
+  // Process keyboard movement
+  vec3 movement = {0.0f, 0.0f, 0.0f};
+  float speed = 5.0f * deltaTime;
+
+  if (state->input_state.keys[GLFW_KEY_W]) {
+    vec3 temp;
+    glm_vec3_scale(camera->front, speed, temp);
+    glm_vec3_add(movement, temp, movement);
+  }
+  if (state->input_state.keys[GLFW_KEY_S]) {
+    vec3 temp;
+    glm_vec3_scale(camera->front, speed, temp);
+    glm_vec3_sub(movement, temp, movement);
+  }
+  if (state->input_state.keys[GLFW_KEY_A]) {
+    vec3 temp;
+    glm_vec3_scale(camera->right, speed, temp);
+    glm_vec3_sub(movement, temp, movement);
+  }
+  if (state->input_state.keys[GLFW_KEY_D]) {
+    vec3 temp;
+    glm_vec3_scale(camera->right, speed, temp);
+    glm_vec3_add(movement, temp, movement);
+  }
+
+  // Apply movement
+  if (glm_vec3_norm(movement) > 0.0f) {
+    glm_vec3_add(camera->position, movement, camera->position);
+    camera->dirty = true;
+  }
+}
+
+void camera_system_process_mouse(World *world, State *state) {
+  Entity camera_entity = state->input_state.active_camera_entity;
+  if (camera_entity == 0)
+    return;
+
+  CameraComponent *camera =
+      get_component(world, camera_entity, COMPONENT_CAMERA);
+  if (!camera || !camera->active)
+    return;
+
+  if (state->input_state.mouse_delta_x != 0.0f ||
+      state->input_state.mouse_delta_y != 0.0f) {
+
+    camera->yaw += state->input_state.mouse_delta_x;
+    camera->pitch += state->input_state.mouse_delta_y;
+
+    // Clamp pitch
+    if (camera->pitch > 89.0f)
+      camera->pitch = 89.0f;
+    if (camera->pitch < -89.0f)
+      camera->pitch = -89.0f;
+
+    camera_system_update_vectors(camera);
+    camera->dirty = true;
+
+    // Reset deltas
+    state->input_state.mouse_delta_x = 0.0f;
+    state->input_state.mouse_delta_y = 0.0f;
+  }
+}
+
+void key_callback(GLFWwindow *window, int key, int scancode, int action,
+                  int mods) {
+  State *state = (State *)glfwGetWindowUserPointer(window);
+  if (action == GLFW_PRESS)
+    state->input_state.keys[key] = true;
+  else if (action == GLFW_RELEASE)
+    state->input_state.keys[key] = false;
+}
+
+void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
+  State *state = (State *)glfwGetWindowUserPointer(window);
+
+  if (state->input_state.firstMouse) {
+    state->input_state.lastX = xpos;
+    state->input_state.lastY = ypos;
+    state->input_state.firstMouse = false;
+  }
+
+  float xoffset = xpos - state->input_state.lastX;
+  float yoffset = state->input_state.lastY - ypos;
+
+  state->input_state.lastX = xpos;
+  state->input_state.lastY = ypos;
+
+  state->input_state.mouse_delta_x = xoffset;
+  state->input_state.mouse_delta_y = yoffset;
+}
+
+void lighting_system_gather(World *world, LightingUBO *lighting_ubo) {
+  memset(lighting_ubo, 0, sizeof(LightingUBO));
+
+  // Set ambient - INCREASE THIS if too dark
+  lighting_ubo->ambientColor[0] = 0.2f;
+  lighting_ubo->ambientColor[1] = 0.2f;
+  lighting_ubo->ambientColor[2] = 0.2f;
+  lighting_ubo->ambientIntensity = 1.0f;
+
+  // Find first light entity
+  bool found_light = false;
+
+  for (uint32_t i = 0; i < world->entity_count; i++) {
+    Entity entity = world->entities[i];
+
+    ComponentSignature required = COMPONENT_SIGNATURE(COMPONENT_LIGHT) |
+                                  COMPONENT_SIGNATURE(COMPONENT_TRANSFORM);
+
+    if ((world->signatures[entity] & required) != required) {
+      continue;
+    }
+
+    LightComponent *light = get_component(world, entity, COMPONENT_LIGHT);
+    TransformComponent *transform =
+        get_component(world, entity, COMPONENT_TRANSFORM);
+
+    if (!light->enabled || found_light) {
+      continue;
+    }
+
+    // Use transform position for light
+    glm_vec3_copy(transform->position, lighting_ubo->lightPos);
+    glm_vec3_copy(light->color, lighting_ubo->lightColor);
+    lighting_ubo->intensity = light->intensity;
+
+    found_light = true;
+    break; // Only use first light for now
+  }
+
+  // Get camera position for specular
+  CameraComponent *camera = get_active_camera(world);
+  if (camera) {
+    glm_vec3_copy(camera->position, lighting_ubo->viewPos);
+  }
+}
+
 // This Inits the renderer all loading happens after this
 void renderer_init(void) {
   create_render_pass(&kuta_context->state);
@@ -310,8 +565,13 @@ void renderer_init(void) {
 // This Deinits the renderer
 void renderer_deinit(void) {
   ResourceManager *rm = get_resource_manager();
+
   create_descriptor_pool(&kuta_context->state, rm);
+
+  // CREATE UNIFORM BUFFERS (both camera and lighting!)
   create_uniform_buffers(&kuta_context->state, &kuta_context->buffer_data);
+  create_lighting_buffers(&kuta_context->state);
+
   create_descriptor_sets(&kuta_context->buffer_data, rm, &kuta_context->state);
   allocate_command_buffer(&kuta_context->state);
   create_sync_objects(&kuta_context->state);
@@ -440,11 +700,12 @@ bool kuta_init(Settings *settings) {
   kuta_context->settings.background_color = settings->background_color;
 
   create_window(&kuta_context->state.window_data);
+
   // Set the state as window user pointer so callbacks can access it
   glfwSetWindowUserPointer(kuta_context->state.window_data.window,
                            &kuta_context->state);
 
-  // Initialize input state
+  // Initialize input state for mouse tracking
   kuta_context->state.input_state.firstMouse = true;
   kuta_context->state.input_state.lastX =
       kuta_context->state.window_data.width / 2.0f;
@@ -458,9 +719,7 @@ bool kuta_init(Settings *settings) {
   glfwSetInputMode(kuta_context->state.window_data.window, GLFW_CURSOR,
                    GLFW_CURSOR_DISABLED);
 
-  camera_init(&kuta_context->state.input_state.camera);
   init_vk(&kuta_context->settings, &kuta_context->state);
-
   create_swapchain(&kuta_context->state);
 
   return true;
@@ -468,14 +727,20 @@ bool kuta_init(Settings *settings) {
 
 float lastFrame = 0.0f;
 // Begins the update loop
-void begin_frame(void) {
+void begin_frame(World *world) {
   float currentFrame = glfwGetTime();
   float deltaTime = currentFrame - lastFrame;
   lastFrame = currentFrame;
 
   glfwPollEvents();
 
-  process_input(&kuta_context->state, deltaTime);
+  // Process input for active camera
+  camera_system_process_input(world, &kuta_context->state, deltaTime);
+  camera_system_process_mouse(world, &kuta_context->state);
+
+  // Update camera matrices
+  camera_system_update(world, kuta_context->state.window_data.width,
+                       kuta_context->state.window_data.height);
 
   uint32_t frame = kuta_context->state.renderer.current_frame;
   vkWaitForFences(kuta_context->state.vk_core.device, 1,
@@ -489,13 +754,13 @@ void begin_frame(void) {
 
 // Ends the loop submits the draw commands and updates the transform system
 void end_frame(World *world) {
-
   transform_system_update(world);
 
   record_command_buffer(&kuta_context->buffer_data, &kuta_context->settings,
                         &kuta_context->state, world);
 
-  submit_command_buffer(&kuta_context->buffer_data, &kuta_context->state);
+  submit_command_buffer(&kuta_context->buffer_data, &kuta_context->state,
+                        world);
 
   present_swapchain_image(&kuta_context->state);
 
@@ -536,6 +801,7 @@ void kuta_deinit(void) {
     }
   }
 
+  destroy_lighting_buffers(&kuta_context->state);
   destroy_uniform_buffers(&kuta_context->buffer_data, &kuta_context->state);
   destroy_descriptor_sets(&kuta_context->state);
   destroy_descriptor_set_layout(&kuta_context->state);

@@ -19,6 +19,10 @@ void set_entity_scale(World *world, Entity entity, vec3 scale);
 
 void move_entity(World *world, Entity entity, vec3 delta);
 
+void camera_system_update_vectors(CameraComponent *camera);
+
+void set_active_camera(Entity *camera_entity);
+
 bool kuta_init(Settings *settings);
 
 void renderer_init(void);
@@ -29,8 +33,7 @@ uint32_t load_texture(const char *texture_file);
 
 void renderer_deinit(void);
 
-void begin_frame(void);
-
+void begin_frame(World *world);
 void end_frame(World *world);
 
 bool running();

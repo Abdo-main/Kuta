@@ -466,12 +466,13 @@ void record_command_buffer(BufferData *buffer_data, Settings *settings,
   EXPECT(vkEndCommandBuffer(command_buffer), "Couldn't end command buffer");
 }
 
-void submit_command_buffer(BufferData *buffer_data, State *state) {
+void submit_command_buffer(BufferData *buffer_data, State *state, World *world) {
   uint32_t frame = state->renderer.current_frame;
   uint32_t image_index = state->swp_ch.acquired_image_index;
   VkCommandBuffer command_buffer = state->renderer.command_buffers[frame];
 
-  update_uniform_buffer(state->renderer.current_frame, state, buffer_data);
+  update_camera_uniform_buffer(world, buffer_data, state, frame);
+  update_lighting_uniform_buffer(world, state, frame);
 
   EXPECT(vkQueueSubmit(
              state->vk_core.graphics_queue, 1,

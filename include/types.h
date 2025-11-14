@@ -14,6 +14,7 @@ typedef enum {
   COMPONENT_MESH_RENDERER,
   COMPONENT_CAMERA,
   COMPONENT_VISIBILITY,
+  COMPONENT_LIGHT,
   COMPONENT_COUNT
 } ComponentType;
 
@@ -34,6 +35,51 @@ typedef struct {
   bool visible;
   float alpha;
 } VisibilityComponent;
+
+typedef struct {
+  vec3 position;
+  vec3 front;
+  vec3 up;
+  vec3 right;
+  vec3 worldUp;
+
+  float yaw;
+  float pitch;
+  float fov;
+  float nearPlane;
+  float farPlane;
+
+  mat4 view;
+  mat4 projection;
+
+  bool active;
+  bool dirty;
+} CameraComponent;
+
+typedef enum {
+  LIGHT_TYPE_DIRECTIONAL,
+  LIGHT_TYPE_POINT,
+  LIGHT_TYPE_SPOT
+} LightType;
+
+typedef struct {
+  LightType type;
+  vec3 color;
+  float intensity;
+
+  // For point/spot lights (uses Transform position)
+  float radius;
+  float attenuation;
+
+  // For directional lights
+  vec3 direction;
+
+  // For spot lights
+  float cutoff;
+  float outerCutoff;
+
+  bool enabled;
+} LightComponent;
 
 typedef uint64_t ComponentSignature;
 

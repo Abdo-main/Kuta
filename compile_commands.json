@@ -1,74 +1,74 @@
 [
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/common/utils.c.o -c /home/hamjour/G/Kuta/src/common/utils.c",
-  "file": "/home/hamjour/G/Kuta/src/common/utils.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/common/utils.c.o -c /home/abdo/dev/Kuta/src/common/utils.c",
+  "file": "/home/abdo/dev/Kuta/src/common/utils.c",
   "output": "CMakeFiles/kuta.dir/src/common/utils.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/core/main.c.o -c /home/hamjour/G/Kuta/src/core/main.c",
-  "file": "/home/hamjour/G/Kuta/src/core/main.c",
-  "output": "CMakeFiles/kuta.dir/src/core/main.c.o"
-},
-{
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/core/window.c.o -c /home/hamjour/G/Kuta/src/core/window.c",
-  "file": "/home/hamjour/G/Kuta/src/core/window.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/core/window.c.o -c /home/abdo/dev/Kuta/src/core/window.c",
+  "file": "/home/abdo/dev/Kuta/src/core/window.c",
   "output": "CMakeFiles/kuta.dir/src/core/window.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/core/vulkan_core.c.o -c /home/hamjour/G/Kuta/src/core/vulkan_core.c",
-  "file": "/home/hamjour/G/Kuta/src/core/vulkan_core.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/core/vulkan_core.c.o -c /home/abdo/dev/Kuta/src/core/vulkan_core.c",
+  "file": "/home/abdo/dev/Kuta/src/core/vulkan_core.c",
   "output": "CMakeFiles/kuta.dir/src/core/vulkan_core.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/core/kuta.c.o -c /home/hamjour/G/Kuta/src/core/kuta.c",
-  "file": "/home/hamjour/G/Kuta/src/core/kuta.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/core/kuta.c.o -c /home/abdo/dev/Kuta/src/core/kuta.c",
+  "file": "/home/abdo/dev/Kuta/src/core/kuta.c",
   "output": "CMakeFiles/kuta.dir/src/core/kuta.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/renderer.c.o -c /home/hamjour/G/Kuta/src/graphics/renderer.c",
-  "file": "/home/hamjour/G/Kuta/src/graphics/renderer.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/renderer.c.o -c /home/abdo/dev/Kuta/src/graphics/renderer.c",
+  "file": "/home/abdo/dev/Kuta/src/graphics/renderer.c",
   "output": "CMakeFiles/kuta.dir/src/graphics/renderer.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/swapchain.c.o -c /home/hamjour/G/Kuta/src/graphics/swapchain.c",
-  "file": "/home/hamjour/G/Kuta/src/graphics/swapchain.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/swapchain.c.o -c /home/abdo/dev/Kuta/src/graphics/swapchain.c",
+  "file": "/home/abdo/dev/Kuta/src/graphics/swapchain.c",
   "output": "CMakeFiles/kuta.dir/src/graphics/swapchain.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/buffer_data.c.o -c /home/hamjour/G/Kuta/src/graphics/buffer_data.c",
-  "file": "/home/hamjour/G/Kuta/src/graphics/buffer_data.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/buffer_data.c.o -c /home/abdo/dev/Kuta/src/graphics/buffer_data.c",
+  "file": "/home/abdo/dev/Kuta/src/graphics/buffer_data.c",
   "output": "CMakeFiles/kuta.dir/src/graphics/buffer_data.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/descriptors.c.o -c /home/hamjour/G/Kuta/src/graphics/descriptors.c",
-  "file": "/home/hamjour/G/Kuta/src/graphics/descriptors.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/descriptors.c.o -c /home/abdo/dev/Kuta/src/graphics/descriptors.c",
+  "file": "/home/abdo/dev/Kuta/src/graphics/descriptors.c",
   "output": "CMakeFiles/kuta.dir/src/graphics/descriptors.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/texture_data.c.o -c /home/hamjour/G/Kuta/src/graphics/texture_data.c",
-  "file": "/home/hamjour/G/Kuta/src/graphics/texture_data.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/texture_data.c.o -c /home/abdo/dev/Kuta/src/graphics/texture_data.c",
+  "file": "/home/abdo/dev/Kuta/src/graphics/texture_data.c",
   "output": "CMakeFiles/kuta.dir/src/graphics/texture_data.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/models.c.o -c /home/hamjour/G/Kuta/src/graphics/models.c",
-  "file": "/home/hamjour/G/Kuta/src/graphics/models.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/models.c.o -c /home/abdo/dev/Kuta/src/graphics/models.c",
+  "file": "/home/abdo/dev/Kuta/src/graphics/models.c",
   "output": "CMakeFiles/kuta.dir/src/graphics/models.c.o"
 },
 {
-  "directory": "/home/hamjour/G/Kuta/build",
-  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/hamjour/G/Kuta/third_party/cglm/include -I/home/hamjour/G/Kuta/third_party/assimp/include -I/home/hamjour/G/Kuta/third_party/glfw/include -I/home/hamjour/G/Kuta/third_party/stb -I/home/hamjour/G/Kuta/src/common -I/home/hamjour/G/Kuta/src/core -I/home/hamjour/G/Kuta/src/graphics -I/home/hamjour/G/Kuta/include -I/home/hamjour/G/Kuta/src -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/camera.c.o -c /home/hamjour/G/Kuta/src/graphics/camera.c",
-  "file": "/home/hamjour/G/Kuta/src/graphics/camera.c",
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/src/graphics/camera.c.o -c /home/abdo/dev/Kuta/src/graphics/camera.c",
+  "file": "/home/abdo/dev/Kuta/src/graphics/camera.c",
   "output": "CMakeFiles/kuta.dir/src/graphics/camera.c.o"
+},
+{
+  "directory": "/home/abdo/dev/Kuta/build",
+  "command": "/usr/bin/cc -DNDEBUG=1 -I/home/abdo/dev/Kuta/src/common -I/home/abdo/dev/Kuta/src/core -I/home/abdo/dev/Kuta/src/graphics -I/home/abdo/dev/Kuta/include -I/home/abdo/dev/Kuta/src -I/home/abdo/dev/Kuta/third_party/cglm/include -I/home/abdo/dev/Kuta/third_party/assimp/include -I/home/abdo/dev/Kuta/third_party/glfw/include -I/home/abdo/dev/Kuta/third_party/stb -O3 -DNDEBUG -std=gnu17 -Wall -Wextra -Wno-unused-parameter -O3 -o CMakeFiles/kuta.dir/examples/main.c.o -c /home/abdo/dev/Kuta/examples/main.c",
+  "file": "/home/abdo/dev/Kuta/examples/main.c",
+  "output": "CMakeFiles/kuta.dir/examples/main.c.o"
 }
 ]

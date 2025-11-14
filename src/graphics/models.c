@@ -47,6 +47,13 @@ GeometryData load_models(const char *filename) {
       vert.pos[0] = mesh->mVertices[v].x;
       vert.pos[1] = mesh->mVertices[v].y;
       vert.pos[2] = mesh->mVertices[v].z;
+
+      if (mesh->mNormals) {
+        vert.normal[0] = mesh->mNormals[v].x;
+        vert.normal[1] = mesh->mNormals[v].y;
+        vert.normal[2] = mesh->mNormals[v].z;
+      }
+
       if (mesh->mTextureCoords[0]) {
         vert.tex_coord[0] = mesh->mTextureCoords[0][v].x;
         vert.tex_coord[1] = mesh->mTextureCoords[0][v].y;

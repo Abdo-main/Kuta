@@ -4,8 +4,9 @@
 #include <vulkan/vulkan_core.h>
 
 #include "buffer_data.h"
-#include "camera.h"
 #include "descriptors.h"
+#include "internal_types.h"
+#include "kuta_internal.h"
 #include "texture_data.h"
 #include "utils.h"
 
@@ -18,21 +19,28 @@ VkVertexInputBindingDescription get_binding_description() {
 
   return binding_description;
 }
-
 AttributeDescriptions get_attribute_descriptions(void) {
   AttributeDescriptions descs = {0};
 
+  // Position (location 0)
   descs.items[0].binding = 0;
   descs.items[0].location = 0;
   descs.items[0].format = VK_FORMAT_R32G32B32_SFLOAT;
   descs.items[0].offset = offsetof(Vertex, pos);
 
+  // Normal (location 1) - ADD THIS!
   descs.items[1].binding = 0;
   descs.items[1].location = 1;
-  descs.items[1].format = VK_FORMAT_R32G32_SFLOAT;
-  descs.items[1].offset = offsetof(Vertex, tex_coord);
+  descs.items[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+  descs.items[1].offset = offsetof(Vertex, normal);
 
-  descs.count = 2;
+  // TexCoord (location 2) - Changed from location 1!
+  descs.items[2].binding = 0;
+  descs.items[2].location = 2;
+  descs.items[2].format = VK_FORMAT_R32G32_SFLOAT;
+  descs.items[2].offset = offsetof(Vertex, tex_coord);
+
+  descs.count = 3; // Changed from 2 to 3
 
   return descs;
 }
@@ -184,23 +192,68 @@ void destroy_uniform_buffers(BufferData *buffer_data, State *state) {
   }
 }
 
-void update_uniform_buffer(uint32_t current_image, State *state,
-                           BufferData *buffer_data) {
-  UBO ubo = {0};
+void create_lighting_buffers(State *state) {
+  VkDeviceSize buffer_size = sizeof(LightingUBO);
 
-  mat4 view;
-  camera_get_view_matrix(&state->input_state.camera, view);
-  glm_mat4_copy(view, ubo.view);
+  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    create_buffer(buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                  &state->renderer.lighting_buffers[i],
+                  &state->renderer.lighting_memory[i], state);
+  }
+}
 
-  mat4 proj;
-  glm_perspective(glm_rad(45.0f),
-                  state->swp_ch.extent.width /
-                      (float)state->swp_ch.extent.height,
-                  0.1f, 10.0f, proj);
-  proj[1][1] *= -1;
-  glm_mat4_copy(proj, ubo.proj);
+void destroy_lighting_buffers(State *state) {
+  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    if (state->renderer.lighting_buffers[i] != VK_NULL_HANDLE) {
+      vkDestroyBuffer(state->vk_core.device,
+                      state->renderer.lighting_buffers[i],
+                      state->vk_core.allocator);
+    }
+    if (state->renderer.lighting_memory[i] != VK_NULL_HANDLE) {
+      vkFreeMemory(state->vk_core.device, state->renderer.lighting_memory[i],
+                   state->vk_core.allocator);
+    }
+  }
+}
 
-  memcpy(buffer_data->uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
+void update_camera_uniform_buffer(World *world, BufferData *buffer_data,
+                                  State *state, uint32_t current_image) {
+  CameraComponent *camera = get_active_camera(world);
+  if (!camera)
+    return;
+
+  typedef struct {
+    mat4 view;
+    mat4 proj;
+  } CameraUBO;
+
+  CameraUBO ubo;
+  glm_mat4_copy(camera->view, ubo.view);
+  glm_mat4_copy(camera->projection, ubo.proj);
+
+  void *data;
+  vkMapMemory(state->vk_core.device,
+              buffer_data->uniform_buffers_memory[current_image], 0,
+              sizeof(CameraUBO), 0, &data);
+  memcpy(data, &ubo, sizeof(CameraUBO));
+  vkUnmapMemory(state->vk_core.device,
+                buffer_data->uniform_buffers_memory[current_image]);
+}
+
+void update_lighting_uniform_buffer(World *world, State *state,
+                                    uint32_t current_image) {
+  LightingUBO lighting_ubo;
+  lighting_system_gather(world, &lighting_ubo);
+
+  void *data;
+  vkMapMemory(state->vk_core.device,
+              state->renderer.lighting_memory[current_image], 0,
+              sizeof(LightingUBO), 0, &data);
+  memcpy(data, &lighting_ubo, sizeof(LightingUBO));
+  vkUnmapMemory(state->vk_core.device,
+                state->renderer.lighting_memory[current_image]);
 }
 
 VkFormat find_supported_format(VkFormat *candidates, size_t candidate_count,

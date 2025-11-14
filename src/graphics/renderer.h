@@ -4,7 +4,8 @@
 
 void record_command_buffer(BufferData *buffer_data, Settings *settings,
                            State *state, World *world);
-void submit_command_buffer(BufferData *buffer_data, State *state);
+
+void submit_command_buffer(BufferData *buffer_data, State *state, World *world);
 
 void create_frame_buffers(State *state);
 

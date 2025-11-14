@@ -27,6 +27,10 @@ void create_index_buffer(State *state, BufferData *buffer_data,
 
 void create_uniform_buffers(State *state, BufferData *buffer_data);
 
+void create_lighting_buffers(State *state);
+
+void destroy_lighting_buffers(State *state);
+
 bool has_stencil_component(VkFormat format);
 
 void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
@@ -37,7 +41,10 @@ void create_depth_resources(State *state);
 
 VkFormat find_depth_format(State *state);
 
-void update_uniform_buffer(uint32_t current_image, State *state,
-                           BufferData *buffer_data);
-
 void destroy_uniform_buffers(BufferData *buffer_data, State *state);
+
+void update_camera_uniform_buffer(World *world, BufferData *buffer_data,
+                                  State *state, uint32_t current_image);
+
+void update_lighting_uniform_buffer(World *world, State *state,
+                                    uint32_t current_image);

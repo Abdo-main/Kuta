@@ -21,7 +21,6 @@ set(GRAPHICS_SOURCES
     src/graphics/descriptors.c
     src/graphics/texture_data.c
     src/graphics/models.c
-    src/graphics/camera.c
 )
 
 add_executable(kuta

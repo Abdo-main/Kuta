@@ -13,6 +13,7 @@
 typedef struct {
   vec3 pos;
   vec3 color;
+  vec3 normal;    
   vec2 tex_coord;
 } Vertex;
 
@@ -76,6 +77,24 @@ typedef struct {
 } Stack;
 
 typedef struct {
+  vec3 position;
+  float _pad1;
+  vec3 color;
+  float intensity;
+} LightData;
+
+typedef struct {
+    vec3 lightPos;
+    float _pad1;
+    vec3 lightColor;
+    float intensity;
+    vec3 viewPos;
+    float _pad2;
+    vec3 ambientColor;
+    float ambientIntensity;
+} LightingUBO;
+
+typedef struct {
   mat4 view;
   mat4 proj;
 } CameraUBO;
@@ -98,6 +117,8 @@ typedef struct {
   VkImage depth_image;
   VkDeviceMemory depth_image_memory;
   VkImageView depth_image_view;
+  VkBuffer lighting_buffers[MAX_FRAMES_IN_FLIGHT];
+  VkDeviceMemory lighting_memory[MAX_FRAMES_IN_FLIGHT];
 } Renderer;
 
 typedef struct {
@@ -120,7 +141,9 @@ typedef struct {
   bool keys[GLFW_KEY_LAST];
   bool firstMouse;
   float lastX, lastY;
-  Camera camera;
+  Entity active_camera_entity;
+  float mouse_delta_x;
+  float mouse_delta_y;  
 } InputState;
 
 typedef struct {
