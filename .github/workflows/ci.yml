@@ -19,11 +19,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
+      - name: Cache vcpkg
+        uses: actions/cache@v4
         with:
-          # Use a more recent commit to avoid the draco/MSYS2 issue
-          vcpkgGitCommitId: "c82ec7e81cc8c073baaf5b1e97861d1cc50835e8"
+          path: |
+            ${{ github.workspace }}/vcpkg
+            !${{ github.workspace }}/vcpkg/buildtrees
+            !${{ github.workspace }}/vcpkg/packages
+            !${{ github.workspace }}/vcpkg/downloads
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: Setup vcpkg
+        shell: powershell
+        run: |
+          if (-Not (Test-Path "vcpkg")) {
+            git clone https://github.com/microsoft/vcpkg.git
+            cd vcpkg
+            .\bootstrap-vcpkg.bat
+          } else {
+            Write-Host "vcpkg already exists (from cache)"
+            cd vcpkg
+            if (-Not (Test-Path "vcpkg.exe")) {
+              .\bootstrap-vcpkg.bat
+            }
+          }
 
       - name: Cache Vulkan SDK
         id: cache-vulkan-sdk
