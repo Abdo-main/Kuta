@@ -36,13 +36,18 @@ void select_physical_device(State *state) {
          "Failed to enumerate physical devices count1")
   EXPECT(count == 0, "Failed to find vulkan supported physical device")
 
-  VkPhysicalDevice devices[count];
+  VkPhysicalDevice *devices = malloc(sizeof(VkPhysicalDevice) * count);
+  if (!devices) {
+    fprintf(stderr, "Failed to allocate memory for devices\n");
+    exit(EXIT_FAILURE);
+  }
   VkResult result =
       vkEnumeratePhysicalDevices(state->vk_core.instance, &count, devices);
   if (result != VK_INCOMPLETE) {
     EXPECT(result, "Failed to enumerate physical devices")
   }
   state->vk_core.physical_device = devices[0];
+  free(devices);
 }
 
 void create_surface(State *state) {
