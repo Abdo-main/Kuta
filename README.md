@@ -1,0 +1,109 @@
+# Kuta Game Engine
+
+A lightweight, code-first 3D should be game engine built with Vulkan.
+
+## Demo
+
+[Link to demo video here]
+
+*Early prototype - Light diffuse rendering example*
+
+## About
+
+Kuta is a personal should be game engine project focused on minimalism and developer control. Unlike commercial game engines with heavy abstraction layers, Kuta prioritizes:
+
+- **Lightweight architecture** - Minimal overhead, maximum control
+- **Code-first workflow** - Most work happens in your code editor
+- **Low abstraction** - Direct access to rendering pipeline and engine internals
+
+>  **Status**: Very early development - not yet at prototype stage
+
+## Features (Current)
+
+-  Vulkan-based rendering backend
+-  Window management (GLFW)
+-  3D model loading (Assimp)
+-  Texture support
+-  Basic lighting (diffuse)
+-  Descriptor system
+-  Buffer management
+
+## Planned Features
+
+- [ ] Overall enhancing of current features.
+- [ ] GUI level editor (simple, code-complementary)
+- [ ] PBR materials
+- [ ] Scene management
+- [ ] Physics integration
+- [ ] Audio system
+
+## Building
+
+### Prerequisites
+
+**Linux:**
+- CMake 3.16+
+- GCC or Clang with C17 support
+- Vulkan SDK
+- GLFW3
+- cglm
+- Assimp
+
+**Windows:**
+- CMake 3.16+
+- MinGW gcc
+- Vulkan SDK
+- Dependencies via vcpkg (GLFW, cglm, Assimp)
+
+### Build Instructions
+
+```bash
+# Clone the repository
+https://github.com/Abdo-main/Kuta.git
+cd kuta
+
+# Build the engine library
+use the build script for your system
+
+
+# The library will be automatically copied to examples/*/include/
+```
+
+## Running Examples
+
+Each example is self-contained with its own Makefile:
+
+```bash
+cd examples/lightDiffuse
+make
+./lightDiffuse
+```
+
+### Available Examples
+
+- **lightDiffuse** - Basic diffuse lighting with 3D models
+
+## Using Kuta in Your Project
+
+1. Build the engine (generates `libkuta.so` or `kuta.dll`)
+2. Copy the library and headers to your project
+3. Link against kuta, cglm, and math library:
+
+## Development Goals
+
+This engine is built primarily for personal game development with these priorities:
+
+1. **Understanding over convenience** - Learn how modern rendering works
+2. **Performance** - Lightweight design, minimal overhead
+3. **Flexibility** - Easy to modify and extend
+4. **Simplicity** - Clean, readable C code
+
+## Contributing
+
+This is primarily a personal learning project, but suggestions and feedback are welcome! Feel free to open issues for discussion.
+
+## License
+
+GPL-3.0
+
+*Note: This (engine if you can call it that)  is in very early development. APIs will change frequently. Use at your own risk!*
