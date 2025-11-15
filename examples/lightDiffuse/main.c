@@ -1,7 +1,6 @@
 #include "cglm/types.h"
 #include "kuta.h"
 #include "types.h"
-#include <GLFW/glfw3.h>
 #include <cglm/cglm.h>
 #include <stdbool.h>
 #include <vulkan/vulkan.h>
@@ -15,23 +14,23 @@ int main(void) {
       .background_color = {{0.0f, 0.0f, 0.0f}},
       .window_width = 800,
       .window_height = 600,
-      .window_title = "Hello, Kuta ECS with Camera & Lighting!!!",
+      .window_title = "Hello, Kuta!",
   };
 
   kuta_init(&settings);
   renderer_init();
 
-  uint32_t player_mesh = load_geometry("./models/twitch.glb");
-  uint32_t enemy_mesh = load_geometry("./models/aatrox.glb");
-  uint32_t player_texture = load_texture("./textures/pasted__twitch.png");
-  uint32_t enemy_texture = load_texture("./textures/Body-Aatrox.png");
+  uint32_t player_mesh = load_geometry("./assets/models/twitch.glb");
+  uint32_t enemy_mesh = load_geometry("./assets/models/aatrox.glb");
+  uint32_t player_texture =
+      load_texture("./assets/textures/pasted__twitch.png");
+  uint32_t enemy_texture = load_texture("./assets/textures/Body-Aatrox.png");
 
   renderer_deinit();
 
   World world;
   world_init(&world);
 
-  // Create Camera Entity
   Entity camera_entity = create_entity(&world);
   CameraComponent camera = {.position = {0.0f, 2.0f, 5.0f},
                             .worldUp = {0.0f, 1.0f, 0.0f},
@@ -47,7 +46,6 @@ int main(void) {
 
   set_active_camera(&camera_entity);
 
-  // Create Light Entity (Point Light)
   Entity light_entity = create_entity(&world);
   TransformComponent light_transform = {.position = {0.0f, 2.0f, 2.0f},
                                         .rotation = {0.0f, 0.0f, 0.0f},
@@ -57,12 +55,11 @@ int main(void) {
 
   LightComponent light = {.type = LIGHT_TYPE_POINT,
                           .color = {1.0f, 1.0f, 1.0f},
-                          .intensity = 1.0f,
+                          .intensity = 3.0f,
                           .radius = 10.0f,
                           .enabled = true};
   add_component(&world, light_entity, COMPONENT_LIGHT, &light);
 
-  // Create another light (moving)
   Entity light2_entity = create_entity(&world);
   TransformComponent light2_transform = {.position = {-3.0f, 3.0f, 0.0f},
                                          .rotation = {0.0f, 0.0f, 0.0f},
@@ -71,13 +68,12 @@ int main(void) {
   add_component(&world, light2_entity, COMPONENT_TRANSFORM, &light2_transform);
 
   LightComponent light2 = {.type = LIGHT_TYPE_POINT,
-                           .color = {1.0f, 0.5f, 0.2f}, // Orange light
+                           .color = {1.0f, 0.5f, 0.2f},
                            .intensity = 0.8f,
                            .radius = 8.0f,
                            .enabled = true};
   add_component(&world, light2_entity, COMPONENT_LIGHT, &light2);
 
-  // Create Player
   Entity player = create_entity(&world);
   TransformComponent transform1 = {.position = {0.0f, 0.0f, 0.0f},
                                    .rotation = {0.0f, 0.0f, 0.0f},
@@ -94,7 +90,6 @@ int main(void) {
   VisibilityComponent visibility1 = {.visible = true, .alpha = 1.0f};
   add_component(&world, player, COMPONENT_VISIBILITY, &visibility1);
 
-  // Create Enemy
   Entity enemy = create_entity(&world);
   TransformComponent transform2 = {.position = {2.0f, 0.0f, 0.0f},
                                    .rotation = {0.0f, 0.0f, 0.0f},
@@ -114,15 +109,9 @@ int main(void) {
   while (running()) {
     begin_frame(&world);
 
-    float time = glfwGetTime();
-    vec3 light_pos = {
-        cos(time) * 5.0f, // X position (circular motion)
-        3.0f,             // Y position (constant height)
-        sin(time) * 5.0f  // Z position (circular motion)
-    };
+    float time = get_time();
+    vec3 light_pos = {cos(time) * 5.0f, 3.0f, sin(time) * 5.0f};
     set_entity_position(&world, light_entity, light_pos);
-
-    // Move and rotate entities
     vec3 rotation = {0.0f, time, 0.0f};
     set_entity_rotation(&world, player, rotation);
     set_entity_rotation(&world, enemy, rotation);

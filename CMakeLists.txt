@@ -23,28 +23,31 @@ set(GRAPHICS_SOURCES
     src/graphics/models.c
 )
 
-add_executable(kuta
+add_library(kuta SHARED
     ${COMMON_SOURCES}
     ${CORE_SOURCES}
     ${GRAPHICS_SOURCES}
-    examples/main.c
+)
+
+target_include_directories(kuta PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
 )
 
 target_include_directories(kuta PRIVATE
     src/common
     src/core
     src/graphics
-    include
     src
 )
 
 if(WIN32)
-    target_link_libraries(kuta PRIVATE glfw Vulkan::Vulkan)
+    target_link_libraries(kuta PUBLIC glfw Vulkan::Vulkan)
     
     find_package(cglm CONFIG REQUIRED)
     find_package(assimp CONFIG REQUIRED)
     
-    target_link_libraries(kuta PRIVATE cglm::cglm assimp::assimp)
+    target_link_libraries(kuta PUBLIC cglm::cglm assimp::assimp)
     
 elseif(UNIX)
     set(THIRD_PARTY_DIR "${CMAKE_SOURCE_DIR}/third_party")
@@ -61,7 +64,7 @@ elseif(UNIX)
         find_library(ASSIMP_LIB assimp PATHS ${THIRD_PARTY_DIR}/assimp/lib NO_DEFAULT_PATH)
         find_library(GLFW_LIB glfw PATHS ${THIRD_PARTY_DIR}/glfw/lib NO_DEFAULT_PATH)
         
-        target_link_libraries(kuta PRIVATE 
+        target_link_libraries(kuta PUBLIC 
             Vulkan::Vulkan 
             ${GLFW_LIB}
             ${CGLM_LIB}
@@ -69,8 +72,7 @@ elseif(UNIX)
             m
         )
     else()
-        # Fallback to system libraries
-        target_link_libraries(kuta PRIVATE 
+        target_link_libraries(kuta PUBLIC 
             glfw 
             Vulkan::Vulkan 
             cglm 
@@ -100,4 +102,26 @@ else()
     endif()
 endif()
 
-install(TARGETS kuta DESTINATION bin)
+install(TARGETS kuta 
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(DIRECTORY include/ DESTINATION include
+    FILES_MATCHING PATTERN "*.h"
+)
+
+add_custom_command(TARGET kuta POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/examples/lightDiffuse/include
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:kuta> ${CMAKE_SOURCE_DIR}/examples/lightDiffuse/include/
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/examples/lightDiffuse/include/
+)
+
+# Optional: Add more examples here
+# add_custom_command(TARGET kuta POST_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/examples/anotherExample/include
+#     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:kuta> ${CMAKE_SOURCE_DIR}/examples/anotherExample/include/
+#     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/examples/anotherExample/include/
+#     COMMENT "Copying library and headers to examples/anotherExample/"
+# )

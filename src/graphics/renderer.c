@@ -13,11 +13,13 @@
 
 void create_graphics_pipeline(State *state) {
   size_t vert_size;
-  const uint32_t *vert_shader_src = read_file("./shaders/vert.spv", &vert_size);
+  const uint32_t *vert_shader_src =
+      read_file("./assets/shaders/vert.spv", &vert_size);
   EXPECT(!vert_shader_src, "emtpy sprv file");
 
   size_t frag_size;
-  const uint32_t *frag_shader_src = read_file("./shaders/frag.spv", &frag_size);
+  const uint32_t *frag_shader_src =
+      read_file("./assets/shaders/frag.spv", &frag_size);
   EXPECT(!frag_shader_src, "emtpy sprv file");
 
   VkShaderModule vertex_shader_module, fragment_shader_module;
@@ -466,7 +468,8 @@ void record_command_buffer(BufferData *buffer_data, Settings *settings,
   EXPECT(vkEndCommandBuffer(command_buffer), "Couldn't end command buffer");
 }
 
-void submit_command_buffer(BufferData *buffer_data, State *state, World *world) {
+void submit_command_buffer(BufferData *buffer_data, State *state,
+                           World *world) {
   uint32_t frame = state->renderer.current_frame;
   uint32_t image_index = state->swp_ch.acquired_image_index;
   VkCommandBuffer command_buffer = state->renderer.command_buffers[frame];

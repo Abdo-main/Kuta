@@ -829,3 +829,5 @@ void kuta_deinit(void) {
 bool running() {
   return !glfwWindowShouldClose(kuta_context->state.window_data.window);
 }
+
+float get_time() { return glfwGetTime(); }
