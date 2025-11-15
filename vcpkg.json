@@ -1,0 +1,10 @@
+{
+  "name": "kuta",
+  "version": "0.1.0",
+  "dependencies": [
+    "glfw3",
+    "cglm",
+    "assimp",
+    "vulkan"
+  ]
+}

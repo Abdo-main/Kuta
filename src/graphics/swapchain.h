@@ -5,7 +5,7 @@
 
 uint32_t clamp(uint32_t value, uint32_t min, uint32_t max);
 
-void recreate_swapchain(State *state);
+void recreate_swapchain(State *state, World *world);
 
 void acquire_next_swapchain_image(State *state);
 

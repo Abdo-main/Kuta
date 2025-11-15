@@ -13,7 +13,7 @@
 typedef struct {
   vec3 pos;
   vec3 color;
-  vec3 normal;    
+  vec3 normal;
   vec2 tex_coord;
 } Vertex;
 
@@ -84,14 +84,14 @@ typedef struct {
 } LightData;
 
 typedef struct {
-    vec3 lightPos;
-    float _pad1;
-    vec3 lightColor;
-    float intensity;
-    vec3 viewPos;
-    float _pad2;
-    vec3 ambientColor;
-    float ambientIntensity;
+  vec3 lightPos;
+  float _pad1;
+  vec3 lightColor;
+  float intensity;
+  vec3 viewPos;
+  float _pad2;
+  vec3 ambientColor;
+  float ambientIntensity;
 } LightingUBO;
 
 typedef struct {
@@ -143,7 +143,7 @@ typedef struct {
   float lastX, lastY;
   Entity active_camera_entity;
   float mouse_delta_x;
-  float mouse_delta_y;  
+  float mouse_delta_y;
 } InputState;
 
 typedef struct {
@@ -152,6 +152,7 @@ typedef struct {
   VkCore vk_core;
   WindowData window_data;
   InputState input_state;
+  World world;
 } State;
 
 typedef struct {

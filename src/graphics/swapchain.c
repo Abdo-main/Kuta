@@ -5,8 +5,10 @@
 
 #include "buffer_data.h"
 #include "internal_types.h"
+#include "kuta_internal.h"
 #include "renderer.h"
 #include "swapchain.h"
+#include "types.h"
 #include "utils.h"
 
 void acquire_next_swapchain_image(State *state) {
@@ -18,7 +20,7 @@ void acquire_next_swapchain_image(State *state) {
   state->swp_ch.acquired_image_index = image_index;
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-    recreate_swapchain(state);
+    recreate_swapchain(state, &state->world);
     return;
   } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
     EXPECT(2, "failed to acquire swap chain image!");
@@ -41,7 +43,7 @@ void present_swapchain_image(State *state) {
       vkQueuePresentKHR(state->vk_core.graphics_queue, &present_info);
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-    recreate_swapchain(state);
+    recreate_swapchain(state, &state->world);
   } else if (result != VK_SUCCESS) {
     EXPECT(2, "Couldn't present swapchain image %i",
            state->swp_ch.acquired_image_index);
@@ -234,7 +236,7 @@ void create_swapchain(State *state) {
   get_swapchain_images_and_create_image_views(format, state);
 }
 
-void recreate_swapchain(State *state) {
+void recreate_swapchain(State *state, World *world) {
   int width = 0, height = 0;
   while (width == 0 || height == 0) {
     glfwGetFramebufferSize(state->window_data.window, &width, &height);
@@ -248,6 +250,7 @@ void recreate_swapchain(State *state) {
   create_swapchain(state);
   create_depth_resources(state);
   create_frame_buffers(state);
+  camera_dirty(world);
 }
 
 void cleanup_swapchain(State *state) {

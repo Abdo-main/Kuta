@@ -1,3 +1,14 @@
-build/
 .cache/
+
+build/
+build-mingw/
+
+vcpkg/
+
+*.dll
+*.so
+*.lib
+*.a
+*.exe
+
 compile_commands.json

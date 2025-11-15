@@ -30,7 +30,12 @@ Kuta is a personal should be game engine project focused on minimalism and devel
 
 ## Planned Features
 
-- [ ] Overall enhancing of current features.
+### Immediate Priority
+- [ ] **Fix hardcoded shaders** 
+- [ ] **Hot reload support** - Change shaders without recompiling
+- [ ] **Proper asset pipeline** - Clean separation between code and content
+
+## Future
 - [ ] GUI level editor (simple, code-complementary)
 - [ ] PBR materials
 - [ ] Scene management
@@ -49,12 +54,6 @@ Kuta is a personal should be game engine project focused on minimalism and devel
 - cglm
 - Assimp
 
-**Windows:**
-- CMake 3.16+
-- MinGW gcc
-- Vulkan SDK
-- Dependencies via vcpkg (GLFW, cglm, Assimp)
-
 ### Build Instructions
 
 ```bash
@@ -68,6 +67,32 @@ use the build script for your system
 
 # The library will be automatically copied to examples/*/include/
 ```
+
+### Windows Setup (First Time)
+
+1. **Prerequisites:**
+   - Git
+   - CMake 3.16+
+   - MinGW-w64 (for GCC)
+   - Vulkan SDK
+
+2. **Automated Setup:**
+```bash
+   setup-windows.bat
+```
+   This will:
+   - Clone and bootstrap vcpkg
+   - Install all dependencies automatically (from vcpkg.json)
+   - Build the project
+
+3. **Manual Setup (if you prefer):**
+```bash
+   git clone https://github.com/microsoft/vcpkg.git
+   vcpkg\bootstrap-vcpkg.bat
+   cmake -B build -DCMAKE_TOOLCHAIN_FILE=vcpkg\scripts\buildsystems\vcpkg.cmake
+   cmake --build build
+```
+
 
 ## Running Examples
 

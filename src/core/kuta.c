@@ -302,6 +302,20 @@ void render_system_draw(World *world, VkCommandBuffer cmd_buffer) {
   }
 }
 
+// mark camera as dirty
+void camera_dirty(World *world) {
+  for (uint32_t i = 0; i < world->entity_count; i++) {
+    Entity entity = world->entities[i];
+
+    if ((world->signatures[entity] & COMPONENT_SIGNATURE(COMPONENT_CAMERA))) {
+      CameraComponent *camera = get_component(world, entity, COMPONENT_CAMERA);
+      if (camera) {
+        camera->dirty = true;
+      }
+    }
+  }
+}
+
 // Update camera vectors based on yaw/pitch
 void camera_system_update_vectors(CameraComponent *camera) {
   vec3 front;
@@ -315,8 +329,7 @@ void camera_system_update_vectors(CameraComponent *camera) {
 }
 
 // Update camera matrices
-void camera_system_update(World *world, uint32_t window_width,
-                          uint32_t window_height) {
+void camera_system_update(World *world, State *state) {
   for (uint32_t i = 0; i < world->entity_count; i++) {
     Entity entity = world->entities[i];
 
@@ -331,13 +344,12 @@ void camera_system_update(World *world, uint32_t window_width,
     }
 
     if (camera->dirty) {
-      // Update view matrix
       vec3 center;
       glm_vec3_add(camera->position, camera->front, center);
       glm_lookat(camera->position, center, camera->up, camera->view);
 
-      // Update projection matrix
-      float aspect = (float)window_width / (float)window_height;
+      float aspect = (float)state->swp_ch.extent.width /
+                     (float)state->swp_ch.extent.height;
       glm_perspective(glm_rad(camera->fov), aspect, camera->nearPlane,
                       camera->farPlane, camera->projection);
 
@@ -739,8 +751,7 @@ void begin_frame(World *world) {
   camera_system_process_mouse(world, &kuta_context->state);
 
   // Update camera matrices
-  camera_system_update(world, kuta_context->state.window_data.width,
-                       kuta_context->state.window_data.height);
+  camera_system_update(world, &kuta_context->state);
 
   uint32_t frame = kuta_context->state.renderer.current_frame;
   vkWaitForFences(kuta_context->state.vk_core.device, 1,
