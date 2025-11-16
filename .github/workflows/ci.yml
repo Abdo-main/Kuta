@@ -133,11 +133,11 @@ jobs:
           Copy-Item "build/Release/kuta.dll" -Destination "examples/lightDiffuse/include/"
           Copy-Item "build/Release/kuta.lib" -Destination "examples/lightDiffuse/include/" -ErrorAction SilentlyContinue
           Copy-Item -Recurse "include/*" -Destination "examples/lightDiffuse/include/" -Force
-          
+
           # Compile example with MSVC
           cd examples/lightDiffuse
           cl.exe /std:c17 /I./include main.c /Fe:lightDiffuse.exe /link /LIBPATH:./include kuta.lib
-          
+
           if ($LASTEXITCODE -eq 0) {
             Write-Host "✓ Example built successfully"
           }
@@ -238,17 +238,17 @@ jobs:
           cd kuta-library-windows-x64
           zip -r ../kuta-library-windows-x64.zip .
           cd ..
-          
+
           # Windows example
           cd kuta-example-windows-x64
           zip -r ../kuta-example-windows-x64.zip .
           cd ..
-          
+
           # Linux library
           cd kuta-library-linux-x64
           tar czf ../kuta-library-linux-x64.tar.gz .
           cd ..
-          
+
           echo "Archive contents:"
           ls -lh *.zip *.tar.gz
 
