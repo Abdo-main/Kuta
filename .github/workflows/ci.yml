@@ -68,13 +68,16 @@ jobs:
           echo "C:/VulkanSDK/$env:VULKAN_SDK_VERSION/Bin" >> $env:GITHUB_PATH
 
       - name: Install dependencies via vcpkg (using manifest)
+        shell: powershell
         run: |
-          echo "vcpkg will install dependencies from vcpkg.json"
+          Write-Host "vcpkg will install dependencies from vcpkg.json during CMake configure"
 
       - name: Configure CMake
+        shell: powershell
         run: |
-          cmake -B build -S . -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
-            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake `
+          cmake -B build -S . `
+            -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
+            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -G "Visual Studio 17 2022" -A x64
 
       - name: Build Kuta (Shared Library)
@@ -84,11 +87,25 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Build directory contents:"
-          Get-ChildItem -Path build/Release/ -Recurse
+          Get-ChildItem -Path build -Recurse -Include *.dll,*.lib | ForEach-Object { Write-Host $_.FullName }
           
-          if (Test-Path "build/Release/kuta.dll") {
-            Write-Host "✓ kuta.dll found"
+          # Visual Studio puts output in build/Release/ or build/Debug/
+          $dllPath = if (Test-Path "build/Release/kuta.dll") { 
+            "build/Release" 
+          } elseif (Test-Path "build/Debug/kuta.dll") { 
+            "build/Debug" 
+          } elseif (Test-Path "build/kuta.dll") { 
+            "build" 
+          } else { 
+            $null 
+          }
+          
+          if ($dllPath) {
+            Write-Host "✓ kuta.dll found in: $dllPath"
+            echo "DLL_PATH=$dllPath" >> $env:GITHUB_ENV
           } else {
+            Write-Host "Build directory structure:"
+            Get-ChildItem -Path build -Recurse | Select-Object FullName
             Write-Error "✗ kuta.dll not found!"
             exit 1
           }
