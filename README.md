@@ -130,5 +130,3 @@ This is primarily a personal learning project, but suggestions and feedback are 
 ## License
 
 GPL-3.0
-
-*Note: This (engine if you can call it that)  is in very early development. APIs will change frequently. Use at your own risk!*
