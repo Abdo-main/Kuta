@@ -4,7 +4,7 @@ A lightweight, code-first 3D should be game engine built with Vulkan.
 
 ## Demo
 
-[Link to demo video here]
+https://github.com/user-attachments/assets/345b0d02-4e3b-44c0-9b34-388aa100250b
 
 *Early prototype - Light diffuse rendering example*
 
