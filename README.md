@@ -31,16 +31,16 @@ Kuta is a personal should be game engine project focused on minimalism and devel
 ## Planned Features
 
 ### Immediate Priority
-- [ ] **Fix hardcoded shaders** 
-- [ ] **Hot reload support** - Change shaders without recompiling
-- [ ] **Proper asset pipeline** - Clean separation between code and content
+-  **Mipmaps** 
+-  **MSAA**
+-  **Anisotropic Filtering**
 
 ## Future
-- [ ] GUI level editor (simple, code-complementary)
-- [ ] PBR materials
-- [ ] Scene management
-- [ ] Physics integration
-- [ ] Audio system
+-  GUI level editor (simple, code-complementary)
+-  PBR materials
+-  Scene management
+-  Physics integration
+-  Audio system
 
 ## Building
 
