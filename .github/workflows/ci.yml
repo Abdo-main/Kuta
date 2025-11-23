@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cache vcpkg
+        id: cache-vcpkg
         uses: actions/cache@v4
         with:
           path: |
@@ -32,18 +33,20 @@ jobs:
             vcpkg-${{ runner.os }}-
 
       - name: Setup vcpkg
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
         shell: powershell
         run: |
-          if (-Not (Test-Path "vcpkg")) {
-            git clone https://github.com/microsoft/vcpkg.git
-            cd vcpkg
+          git clone https://github.com/microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+
+      - name: Bootstrap vcpkg if needed
+        if: steps.cache-vcpkg.outputs.cache-hit == 'true'
+        shell: powershell
+        run: |
+          cd vcpkg
+          if (-Not (Test-Path "vcpkg.exe")) {
             .\bootstrap-vcpkg.bat
-          } else {
-            Write-Host "vcpkg already exists (from cache)"
-            cd vcpkg
-            if (-Not (Test-Path "vcpkg.exe")) {
-              .\bootstrap-vcpkg.bat
-            }
           }
 
       - name: Cache Vulkan SDK
@@ -58,117 +61,137 @@ jobs:
         shell: powershell
         run: |
           $url = "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/vulkansdk-windows-X64-$env:VULKAN_SDK_VERSION.exe"
-          Invoke-WebRequest -Uri $url -OutFile vulkansdk-windows-X64.exe
-          Start-Process -FilePath vulkansdk-windows-X64.exe -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait
+          Write-Host "Downloading Vulkan SDK from $url"
+          Invoke-WebRequest -Uri $url -OutFile vulkansdk-installer.exe
+          Write-Host "Installing Vulkan SDK..."
+          Start-Process -FilePath vulkansdk-installer.exe -ArgumentList '--accept-licenses --default-answer --confirm-command install' -Wait -NoNewWindow
+          Write-Host "Vulkan SDK installed"
 
       - name: Setup Vulkan environment
         shell: powershell
         run: |
-          echo "VULKAN_SDK=C:/VulkanSDK/$env:VULKAN_SDK_VERSION" >> $env:GITHUB_ENV
-          echo "C:/VulkanSDK/$env:VULKAN_SDK_VERSION/Bin" >> $env:GITHUB_PATH
-
-      - name: Install dependencies via vcpkg (using manifest)
-        shell: powershell
-        run: |
-          Write-Host "vcpkg will install dependencies from vcpkg.json during CMake configure"
+          $vulkanPath = "C:/VulkanSDK/$env:VULKAN_SDK_VERSION"
+          Add-Content -Path $env:GITHUB_ENV -Value "VULKAN_SDK=$vulkanPath"
+          Add-Content -Path $env:GITHUB_PATH -Value "$vulkanPath/Bin"
+          Write-Host "Vulkan SDK path: $vulkanPath"
 
       - name: Configure CMake
         shell: powershell
         run: |
+          $toolchainFile = "${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          Write-Host "Configuring CMake with toolchain: $toolchainFile"
           cmake -B build -S . `
-            -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
-            -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$toolchainFile" `
             -G "Visual Studio 17 2022" -A x64
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "CMake configuration failed"
+            exit 1
+          }
 
-      - name: Build Kuta (Shared Library)
-        run: cmake --build build --config $env:BUILD_TYPE --parallel
+      - name: Build Kuta Library
+        shell: powershell
+        run: |
+          Write-Host "Building Kuta library..."
+          cmake --build build --config Release --parallel
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Build failed"
+            exit 1
+          }
 
       - name: Verify build output
         shell: powershell
         run: |
-          Write-Host "Build directory contents:"
-          Get-ChildItem -Path build -Recurse -Include *.dll,*.lib | ForEach-Object { Write-Host $_.FullName }
+          Write-Host "Searching for build output..."
+          Get-ChildItem -Path build -Recurse -Include *.dll,*.lib | ForEach-Object { 
+            Write-Host "Found: $($_.FullName)" 
+          }
           
-          # Visual Studio puts output in build/Release/ or build/Debug/
-          $dllPath = if (Test-Path "build/Release/kuta.dll") { 
-            "build/Release" 
+          $dllPath = $null
+          if (Test-Path "build/Release/kuta.dll") { 
+            $dllPath = "build/Release" 
           } elseif (Test-Path "build/Debug/kuta.dll") { 
-            "build/Debug" 
+            $dllPath = "build/Debug" 
           } elseif (Test-Path "build/kuta.dll") { 
-            "build" 
-          } else { 
-            $null 
+            $dllPath = "build" 
           }
           
           if ($dllPath) {
-            Write-Host "✓ kuta.dll found in: $dllPath"
-            echo "DLL_PATH=$dllPath" >> $env:GITHUB_ENV
+            Write-Host "Success: kuta.dll found in $dllPath"
+            Add-Content -Path $env:GITHUB_ENV -Value "DLL_PATH=$dllPath"
           } else {
+            Write-Host "ERROR: kuta.dll not found!"
             Write-Host "Build directory structure:"
-            Get-ChildItem -Path build -Recurse | Select-Object FullName
-            Write-Error "✗ kuta.dll not found!"
+            Get-ChildItem -Path build -Recurse | Select-Object FullName | ForEach-Object { Write-Host $_.FullName }
             exit 1
           }
 
-      - name: Copy Vulkan DLL
+      - name: Copy dependencies
         shell: powershell
         run: |
-          Copy-Item "C:/VulkanSDK/$env:VULKAN_SDK_VERSION/Bin/vulkan-1.dll" -Destination "build/Release/" -ErrorAction SilentlyContinue
-
-      - name: Copy vcpkg DLLs
-        shell: powershell
-        run: |
-          # Copy all required DLLs from vcpkg
+          $dllPath = $env:DLL_PATH
+          Write-Host "Copying dependencies to $dllPath"
+          
+          # Copy Vulkan DLL
+          $vulkanDll = "C:/VulkanSDK/$env:VULKAN_SDK_VERSION/Bin/vulkan-1.dll"
+          if (Test-Path $vulkanDll) {
+            Copy-Item $vulkanDll -Destination "$dllPath/" -Force
+            Write-Host "Copied Vulkan DLL"
+          }
+          
+          # Copy vcpkg DLLs
           $vcpkgBin = "${{ github.workspace }}/vcpkg/installed/x64-windows/bin"
           if (Test-Path $vcpkgBin) {
-            Get-ChildItem $vcpkgBin -Filter *.dll | Copy-Item -Destination "build/Release/" -Force
-            Write-Host "Copied vcpkg DLLs"
+            Get-ChildItem $vcpkgBin -Filter *.dll | ForEach-Object {
+              Copy-Item $_.FullName -Destination "$dllPath/" -Force
+              Write-Host "Copied: $($_.Name)"
+            }
           }
 
-      - name: Build example (lightDiffuse)
+      - name: Package artifacts
         shell: powershell
         run: |
-          # Copy library and headers to example directory
-          New-Item -ItemType Directory -Force -Path "examples/lightDiffuse/include"
-          Copy-Item "build/Release/kuta.dll" -Destination "examples/lightDiffuse/include/"
-          Copy-Item "build/Release/kuta.lib" -Destination "examples/lightDiffuse/include/" -ErrorAction SilentlyContinue
-          Copy-Item -Recurse "include/*" -Destination "examples/lightDiffuse/include/" -Force
-
-          # Compile example with MSVC
-          cd examples/lightDiffuse
-          cl.exe /std:c17 /I./include main.c /Fe:lightDiffuse.exe /link /LIBPATH:./include kuta.lib
-
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "✓ Example built successfully"
+          $dllPath = $env:DLL_PATH
+          
+          # Create artifact directory
+          New-Item -ItemType Directory -Force -Path "artifacts/library" | Out-Null
+          New-Item -ItemType Directory -Force -Path "artifacts/example/include" | Out-Null
+          
+          # Copy library files
+          Copy-Item "$dllPath/kuta.dll" -Destination "artifacts/library/" -Force
+          if (Test-Path "$dllPath/kuta.lib") {
+            Copy-Item "$dllPath/kuta.lib" -Destination "artifacts/library/" -Force
           }
-
-      - name: Copy assets to example
-        shell: powershell
-        run: |
-          cd examples/lightDiffuse
-          if (Test-Path "assets") {
-            Write-Host "Assets already in place"
+          Copy-Item "include/*.h" -Destination "artifacts/library/" -Force
+          
+          # Copy for example
+          Copy-Item "$dllPath/kuta.dll" -Destination "artifacts/example/include/" -Force
+          if (Test-Path "$dllPath/kuta.lib") {
+            Copy-Item "$dllPath/kuta.lib" -Destination "artifacts/example/include/" -Force
           }
+          Copy-Item "include/*.h" -Destination "artifacts/example/include/" -Force
+          
+          # Copy all DLLs
+          Get-ChildItem "$dllPath" -Filter *.dll | ForEach-Object {
+            Copy-Item $_.FullName -Destination "artifacts/example/" -Force
+          }
+          
+          Write-Host "Artifacts packaged successfully"
 
-      - name: Upload Windows artifacts (Library)
+      - name: Upload Library Artifact
         uses: actions/upload-artifact@v4
         with:
           name: kuta-library-windows-x64
-          path: |
-            build/Release/kuta.dll
-            build/Release/kuta.lib
-            include/*.h
+          path: artifacts/library/
           retention-days: 30
 
-      - name: Upload Windows artifacts (Example)
+      - name: Upload Example Dependencies
         uses: actions/upload-artifact@v4
         with:
-          name: kuta-example-windows-x64
-          path: |
-            examples/lightDiffuse/lightDiffuse.exe
-            examples/lightDiffuse/include/kuta.dll
-            examples/lightDiffuse/assets/
-            build/Release/*.dll
+          name: kuta-example-deps-windows-x64
+          path: artifacts/example/
           retention-days: 30
 
   build-linux:
@@ -193,35 +216,35 @@ jobs:
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
-      - name: Build Kuta (Shared Library)
+      - name: Build Kuta Library
         run: |
           cmake --build build --parallel
+          echo "Build completed"
 
       - name: Verify build output
         run: |
           ls -lah build/
           if [ -f "build/libkuta.so" ]; then
             echo "✓ libkuta.so found"
+            file build/libkuta.so
           else
             echo "✗ libkuta.so not found!"
+            find build -name "*.so" -o -name "*.a"
             exit 1
           fi
 
-      - name: Build example (lightDiffuse)
+      - name: Package artifacts
         run: |
-          cd examples/lightDiffuse
-          if [ -f "Makefile" ]; then
-            make
-            echo "✓ Example built successfully"
-          fi
+          mkdir -p artifacts/library
+          cp build/libkuta.so artifacts/library/
+          cp include/*.h artifacts/library/
+          echo "Linux library packaged"
 
-      - name: Upload Linux artifacts
+      - name: Upload Linux Library Artifact
         uses: actions/upload-artifact@v4
         with:
           name: kuta-library-linux-x64
-          path: |
-            build/libkuta.so
-            include/*.h
+          path: artifacts/library/
           retention-days: 30
 
   release:
@@ -231,33 +254,44 @@ jobs:
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Create release archives
         run: |
+          cd artifacts
+          
           # Windows library
-          cd kuta-library-windows-x64
-          zip -r ../kuta-library-windows-x64.zip .
-          cd ..
-
-          # Windows example
-          cd kuta-example-windows-x64
-          zip -r ../kuta-example-windows-x64.zip .
-          cd ..
-
+          if [ -d "kuta-library-windows-x64" ]; then
+            cd kuta-library-windows-x64
+            zip -r ../../kuta-library-windows-x64.zip .
+            cd ..
+          fi
+          
+          # Windows example dependencies
+          if [ -d "kuta-example-deps-windows-x64" ]; then
+            cd kuta-example-deps-windows-x64
+            zip -r ../../kuta-example-deps-windows-x64.zip .
+            cd ..
+          fi
+          
           # Linux library
-          cd kuta-library-linux-x64
-          tar czf ../kuta-library-linux-x64.tar.gz .
+          if [ -d "kuta-library-linux-x64" ]; then
+            cd kuta-library-linux-x64
+            tar czf ../../kuta-library-linux-x64.tar.gz .
+            cd ..
+          fi
+          
           cd ..
-
-          echo "Archive contents:"
-          ls -lh *.zip *.tar.gz
+          echo "Release archives created:"
+          ls -lh *.zip *.tar.gz 2>/dev/null || echo "No archives found"
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
             kuta-library-windows-x64.zip
-            kuta-example-windows-x64.zip
+            kuta-example-deps-windows-x64.zip
             kuta-library-linux-x64.tar.gz
           draft: false
           prerelease: false

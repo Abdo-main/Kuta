@@ -16,7 +16,7 @@ Kuta is a personal should be game engine project focused on minimalism and devel
 - **Code-first workflow** - Most work happens in your code editor
 - **Low abstraction** - Direct access to rendering pipeline and engine internals
 
->  **Status**: Very early development - not yet at prototype stage
+>  **Status**: Very early development - not even at prototype stage
 
 ## Features (Current)
 
@@ -31,13 +31,12 @@ Kuta is a personal should be game engine project focused on minimalism and devel
 ## Planned Features
 
 ### Immediate Priority
--  **Mipmaps** 
--  **MSAA**
--  **Anisotropic Filtering**
+-  **PBR Materials** 
+-  **Normal mapping**
+-  **Shadow Mapping**
 
 ## Future
 -  GUI level editor (simple, code-complementary)
--  PBR materials
 -  Scene management
 -  Physics integration
 -  Audio system
