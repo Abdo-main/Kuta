@@ -37,7 +37,7 @@ void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
                    VkMemoryPropertyFlags properties, VkBuffer *buffer,
                    VkDeviceMemory *buffer_memory, State *state);
 
-void create_depth_resources(State *state);
+void create_depth_resources(State *state, uint32_t mip_levels);
 
 VkFormat find_depth_format(State *state);
 

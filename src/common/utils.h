@@ -53,7 +53,8 @@ void log_info();
 const uint32_t *read_file(const char *filename, size_t *size);
 
 VkImageView create_image_view(VkImage image, VkFormat format,
-                              VkImageAspectFlags aspect_Flags, State *state);
+                              VkImageAspectFlags aspect_Flags,
+                              uint32_t mipLevels, State *state);
 
 uint32_t clamp(uint32_t value, uint32_t min, uint32_t max);
 

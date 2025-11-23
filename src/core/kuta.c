@@ -570,7 +570,9 @@ void renderer_init(void) {
   create_descriptor_set_layout(&kuta_context->state);
   create_graphics_pipeline(&kuta_context->state);
   create_command_pool(&kuta_context->state);
-  create_depth_resources(&kuta_context->state);
+  create_color_resources(&kuta_context->state);
+  create_depth_resources(&kuta_context->state,
+                         kuta_context->texture_data.mip_levels);
   create_frame_buffers(&kuta_context->state);
 }
 
@@ -686,7 +688,7 @@ uint32_t load_texture(const char *texture_file) {
   rm->texture_memory[id] = texture_memory;
 
   rm->textures[id].texture_image_view = create_texture_image_view(
-      &kuta_context->state, rm->textures[id].texture_image);
+      &kuta_context->state, rm->textures[id].texture_image, tx.mipLevels);
   rm->textures[id].texture_sampler =
       create_texture_sampler(&kuta_context->state);
 
@@ -705,6 +707,7 @@ bool kuta_init(Settings *settings) {
   setup_error_handling();
   log_info();
 
+  kuta_context->state.renderer.msaa_samples = VK_SAMPLE_COUNT_1_BIT;
   kuta_context->state.window_data.width = settings->window_width;
   kuta_context->state.window_data.height = settings->window_height;
   kuta_context->state.window_data.title = settings->window_title;
@@ -760,7 +763,8 @@ void begin_frame(World *world) {
   vkResetFences(kuta_context->state.vk_core.device, 1,
                 &kuta_context->state.renderer.in_flight_fence[frame]);
 
-  acquire_next_swapchain_image(&kuta_context->state);
+  acquire_next_swapchain_image(&kuta_context->state,
+                               kuta_context->texture_data.mip_levels);
 }
 
 // Ends the loop submits the draw commands and updates the transform system
@@ -773,7 +777,8 @@ void end_frame(World *world) {
   submit_command_buffer(&kuta_context->buffer_data, &kuta_context->state,
                         world);
 
-  present_swapchain_image(&kuta_context->state);
+  present_swapchain_image(&kuta_context->state,
+                          kuta_context->texture_data.mip_levels);
 
   kuta_context->state.renderer.current_frame =
       (kuta_context->state.renderer.current_frame + 1) % MAX_FRAMES_IN_FLIGHT;

@@ -1,4 +1,5 @@
 #include <cglm/cglm.h>
+#include <stdint.h>
 #include <string.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
@@ -291,19 +292,20 @@ bool has_stencil_component(VkFormat format) {
          format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void create_depth_resources(State *state) {
+void create_depth_resources(State *state, uint32_t mip_levels) {
   VkFormat depth_format = find_depth_format(state);
 
   create_image(
       state->swp_ch.extent.width, state->swp_ch.extent.height, depth_format,
       VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &state->renderer.depth_image,
-      &state->renderer.depth_image_memory, state);
+      &state->renderer.depth_image_memory, mip_levels,
+      state->renderer.msaa_samples, state);
 
   state->renderer.depth_image_view =
       create_image_view(state->renderer.depth_image, depth_format,
-                        VK_IMAGE_ASPECT_DEPTH_BIT, state);
+                        VK_IMAGE_ASPECT_DEPTH_BIT, mip_levels, state);
   transition_image_layout(
       state->renderer.depth_image, depth_format, VK_IMAGE_LAYOUT_UNDEFINED,
-      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, state);
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, mip_levels, state);
 }

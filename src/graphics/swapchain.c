@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
@@ -8,10 +9,11 @@
 #include "kuta_internal.h"
 #include "renderer.h"
 #include "swapchain.h"
+#include "texture_data.h"
 #include "types.h"
 #include "utils.h"
 
-void acquire_next_swapchain_image(State *state) {
+void acquire_next_swapchain_image(State *state, uint32_t mip_levels) {
   uint32_t image_index;
   VkResult result = vkAcquireNextImageKHR(
       state->vk_core.device, state->swp_ch.swapchain, UINT64_MAX,
@@ -20,14 +22,14 @@ void acquire_next_swapchain_image(State *state) {
   state->swp_ch.acquired_image_index = image_index;
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-    recreate_swapchain(state, &state->world);
+    recreate_swapchain(state, &state->world, mip_levels);
     return;
   } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
     EXPECT(2, "failed to acquire swap chain image!");
   }
 }
 
-void present_swapchain_image(State *state) {
+void present_swapchain_image(State *state, uint32_t mip_levels) {
   uint32_t image_index = state->swp_ch.acquired_image_index;
   VkPresentInfoKHR present_info = {
       .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -43,7 +45,7 @@ void present_swapchain_image(State *state) {
       vkQueuePresentKHR(state->vk_core.graphics_queue, &present_info);
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-    recreate_swapchain(state, &state->world);
+    recreate_swapchain(state, &state->world, mip_levels);
   } else if (result != VK_SUCCESS) {
     EXPECT(2, "Couldn't present swapchain image %i",
            state->swp_ch.acquired_image_index);
@@ -236,7 +238,7 @@ void create_swapchain(State *state) {
   get_swapchain_images_and_create_image_views(format, state);
 }
 
-void recreate_swapchain(State *state, World *world) {
+void recreate_swapchain(State *state, World *world, uint32_t mipLevels) {
   int width = 0, height = 0;
   while (width == 0 || height == 0) {
     glfwGetFramebufferSize(state->window_data.window, &width, &height);
@@ -248,12 +250,23 @@ void recreate_swapchain(State *state, World *world) {
   cleanup_swapchain(state);
 
   create_swapchain(state);
-  create_depth_resources(state);
+  create_color_resources(state);
+  create_depth_resources(state, mipLevels);
   create_frame_buffers(state);
   camera_dirty(world);
 }
 
 void cleanup_swapchain(State *state) {
+  vkDestroyImageView(state->vk_core.device,
+                     state->texture_data.color_image_view,
+                     state->vk_core.allocator);
+
+  vkDestroyImage(state->vk_core.device, state->texture_data.color_image,
+                 state->vk_core.allocator);
+
+  vkFreeMemory(state->vk_core.device, state->texture_data.color_image_memory,
+               state->vk_core.allocator);
+
   if (state->renderer.depth_image_view != VK_NULL_HANDLE) {
     vkDestroyImageView(state->vk_core.device, state->renderer.depth_image_view,
                        state->vk_core.allocator);

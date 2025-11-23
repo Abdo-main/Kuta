@@ -54,6 +54,10 @@ typedef struct {
   VkDeviceMemory texture_image_memory;
   VkImageView texture_image_view;
   VkSampler texture_sampler;
+  uint32_t mip_levels;
+  VkImage color_image;
+  VkDeviceMemory color_image_memory;
+  VkImageView color_image_view;
 } TextureData;
 
 typedef struct {
@@ -119,6 +123,7 @@ typedef struct {
   VkImageView depth_image_view;
   VkBuffer lighting_buffers[MAX_FRAMES_IN_FLIGHT];
   VkDeviceMemory lighting_memory[MAX_FRAMES_IN_FLIGHT];
+  VkSampleCountFlagBits msaa_samples;
 } Renderer;
 
 typedef struct {
@@ -153,6 +158,7 @@ typedef struct {
   WindowData window_data;
   InputState input_state;
   World world;
+  TextureData texture_data;
 } State;
 
 typedef struct {
@@ -178,4 +184,5 @@ typedef struct {
   State state;
   BufferData buffer_data;
   Settings settings;
+  TextureData texture_data;
 } KutaContext;

@@ -81,7 +81,8 @@ void end_single_time_commands(VkCommandBuffer command_buffer, State *state) {
 }
 
 VkImageView create_image_view(VkImage image, VkFormat format,
-                              VkImageAspectFlags aspect_Flags, State *state) {
+                              VkImageAspectFlags aspect_Flags,
+                              uint32_t mipLevels, State *state) {
   VkImageViewCreateInfo view_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
       .image = image,
@@ -89,7 +90,7 @@ VkImageView create_image_view(VkImage image, VkFormat format,
       .format = format,
       .subresourceRange.aspectMask = aspect_Flags,
       .subresourceRange.baseMipLevel = 0,
-      .subresourceRange.levelCount = 1,
+      .subresourceRange.levelCount = mipLevels,
       .subresourceRange.baseArrayLayer = 0,
       .subresourceRange.layerCount = 1,
   };

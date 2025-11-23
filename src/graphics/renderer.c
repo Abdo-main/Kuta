@@ -170,7 +170,9 @@ void create_graphics_pipeline(State *state) {
                   &(VkPipelineMultisampleStateCreateInfo){
                       .sType =
                           VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-                      .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+                      .rasterizationSamples = state->renderer.msaa_samples,
+                      .minSampleShading = .2f,
+                      .sampleShadingEnable = VK_TRUE,
                   },
               .pColorBlendState =
                   &(VkPipelineColorBlendStateCreateInfo){
@@ -206,53 +208,71 @@ void destroy_graphics_pipeline(State *state) {
 void create_render_pass(State *state) {
   VkFormat image_format = state->swp_ch.image_format;
 
-  VkAttachmentReference color_attachment_refrences[] = {{
+  VkAttachmentReference color_attachment_ref = {
       .attachment = 0,
       .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-  }};
+  };
 
   VkAttachmentReference depth_attachment_ref = {
       .attachment = 1,
       .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
   };
 
-  VkAttachmentDescription attachment_descriptions[2] = {
-      /* color */
+  VkAttachmentReference color_attachment_resolve_ref = {
+      .attachment = 2,
+      .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+  };
+
+  VkAttachmentDescription attachment_descriptions[3] = {
+      /* [0] color (multisampled) */
       {
           .format = image_format,
-          .samples = VK_SAMPLE_COUNT_1_BIT,
+          .samples = state->renderer.msaa_samples,
           .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-          .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+          .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
           .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
           .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
           .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
           .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
       },
-      /* depth */
+      /* [1] depth (multisampled) */
       {
           .format = find_depth_format(state),
-          .samples = VK_SAMPLE_COUNT_1_BIT,
+          .samples = state->renderer.msaa_samples,
           .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
           .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
           .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
           .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
           .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
           .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      },
+      /* [2] color resolve (single sample - for presentation) */
+      {
+          .format = image_format,
+          .samples = VK_SAMPLE_COUNT_1_BIT,
+          .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+          .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+          .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+          .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+          .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+          .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
       }};
+
   VkSubpassDescription subpass_descriptions[] = {{
       .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
       .colorAttachmentCount = 1,
-      .pColorAttachments = color_attachment_refrences,
+      .pColorAttachments = &color_attachment_ref,
       .pDepthStencilAttachment = &depth_attachment_ref,
+      .pResolveAttachments = &color_attachment_resolve_ref,
   }};
 
   VkSubpassDependency dependency = {
-      /* common robust setup from the tutorial */
       .srcSubpass = VK_SUBPASS_EXTERNAL,
       .dstSubpass = 0,
       .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
                       VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-      .srcAccessMask = 0,
+      .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                       VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
       .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
                       VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
       .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
@@ -265,7 +285,7 @@ void create_render_pass(State *state) {
                  .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
                  .subpassCount = 1,
                  .pSubpasses = subpass_descriptions,
-                 .attachmentCount = 2,
+                 .attachmentCount = 3,
                  .pAttachments = attachment_descriptions,
                  .dependencyCount = 1,
                  .pDependencies = &dependency,
@@ -286,12 +306,12 @@ void create_frame_buffers(State *state) {
   EXPECT(state->renderer.frame_buffers == NULL,
          "Couldn't allocate memory for framebuffers array")
   VkExtent2D frame_buffers_extent = state->swp_ch.extent;
-
   for (uint32_t framebufferIndex = 0; framebufferIndex < frame_buffer_count;
        ++framebufferIndex) {
-    VkImageView attachments[2] = {
-        state->swp_ch.image_views[framebufferIndex],
+    VkImageView attachments[3] = {
+        state->texture_data.color_image_view,
         state->renderer.depth_image_view,
+        state->swp_ch.image_views[framebufferIndex],
     };
     EXPECT(
         vkCreateFramebuffer(

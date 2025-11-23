@@ -1,3 +1,4 @@
+#include "texture_data.h"
 #define GLFW_INCLUDE_VULKAN
 #include "internal_types.h"
 #include "types.h"
@@ -47,6 +48,8 @@ void select_physical_device(State *state) {
     EXPECT(result, "Failed to enumerate physical devices")
   }
   state->vk_core.physical_device = devices[0];
+
+  state->renderer.msaa_samples = get_max_usable_sample_count(state);
   free(devices);
 }
 
@@ -95,6 +98,7 @@ void create_device(State *state) {
                               &supported_features);
   VkPhysicalDeviceFeatures enabledFeatures = {
       .samplerAnisotropy = VK_TRUE,
+      .sampleRateShading = VK_TRUE,
   };
   EXPECT(
       vkCreateDevice(
